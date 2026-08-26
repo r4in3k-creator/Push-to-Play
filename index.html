@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Push to Play</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#131519" media="(prefers-color-scheme: dark)">
@@ -260,11 +261,31 @@
     }
   }
 
-  /* Jump-to-workout pill — phone only, and only once there's something to jump to */
-  .tray-fab{
+  /* Floating controls — phone only. Stacked so they collapse cleanly when one
+     is hidden, instead of each being pinned to its own fixed offset. */
+  .fab-stack{
     display: none;
     position: fixed; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 74px);
-    z-index: 45; align-items: center; gap: 8px;
+    z-index: 45; flex-direction: column; align-items: flex-end; gap: 10px;
+    pointer-events: none;   /* the empty gaps must not swallow taps */
+  }
+  @media (max-width: 920px){ .fab-stack{ display: flex; } }
+  .fab-stack > *{ pointer-events: auto; }
+
+  .top-fab{
+    display: none;
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--border); cursor: pointer;
+    align-items: center; justify-content: center;
+    box-shadow: 0 8px 22px -10px rgba(0,0,0,.55);
+  }
+  .top-fab svg{ width: 21px; height: 21px; display: block; }
+  .top-fab.show{ display: flex; }
+
+  .tray-fab{
+    display: none;
+    align-items: center; gap: 8px;
     background: var(--text); color: var(--bg); border: none; border-radius: 999px;
     padding: 12px 18px; font-family: 'Oswald', sans-serif; text-transform: uppercase;
     letter-spacing: .04em; font-size: 13px; cursor: pointer;
@@ -274,9 +295,7 @@
     font-family: 'JetBrains Mono', monospace; background: var(--bg); color: var(--text);
     border-radius: 999px; padding: 1px 8px; font-size: 12px;
   }
-  @media (max-width: 920px){
-    .tray-fab.show{ display: inline-flex; }
-  }
+  .tray-fab.show{ display: inline-flex; }
   .tray-back{
     display: none; background: none; border: none; color: var(--text-dim);
     font-family: inherit; font-size: 12px; cursor: pointer; padding: 0 0 10px;
@@ -1119,9 +1138,14 @@
   <span>Not affiliated with ExRx.net.</span>
 </footer>
 
-<button type="button" class="tray-fab" id="trayFab" aria-label="Jump to your workout">
-  Workout <span class="fab-count" id="fabCount">0</span>
-</button>
+<div class="fab-stack">
+  <button type="button" class="top-fab" id="topFab" aria-label="Back to top">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+  </button>
+  <button type="button" class="tray-fab" id="trayFab" aria-label="Jump to your workout">
+    Workout <span class="fab-count" id="fabCount">0</span>
+  </button>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -3461,14 +3485,26 @@
      On a phone the tray sits below the whole directory, which is the wrong place for
      the thing you touch most mid-workout. A pill jumps to it, and the tray offers a
      way back. Both are CSS-hidden above 920px. */
-  const trayFab = document.getElementById("trayFab");
+  const trayFab  = document.getElementById("trayFab");
   const fabCount = document.getElementById("fabCount");
+  const topFab   = document.getElementById("topFab");
 
   function syncTrayFab(){
-    const show = currentView === "train" && tray.length > 0;
-    trayFab.classList.toggle("show", show);
+    trayFab.classList.toggle("show", currentView === "train" && tray.length > 0);
     fabCount.textContent = tray.length;
+    syncTopFab();
   }
+
+  /* The back-to-top arrow earns its place on every tab — the exercise directory,
+     a six-day split and a month of records all run far longer than one screen. */
+  function syncTopFab(){
+    topFab.classList.toggle("show", window.scrollY > 500);
+  }
+  window.addEventListener("scroll", syncTopFab, { passive: true });
+
+  topFab.addEventListener("click", ()=>{
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
   trayFab.addEventListener("click", ()=>{
     document.getElementById("trayPanel").scrollIntoView({ behavior:"smooth", block:"start" });
   });
