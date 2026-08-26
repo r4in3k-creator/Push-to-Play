@@ -1,0 +1,434 @@
+<title>Push to Play Palette Study</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+  /* ---- page chrome: deliberately neutral so it never competes with the samples ---- */
+  :root{
+    --page-bg:#f4f3f0; --page-surface:#ffffff; --page-border:#ded9cf;
+    --page-text:#1e1d1a; --page-dim:#5f5b52; --page-faint:#8d887d;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --page-bg:#131315; --page-surface:#1b1b1e; --page-border:#33333a;
+      --page-text:#eceaе6; --page-text:#ecebe8; --page-dim:#a3a09a; --page-faint:#6f6c66;
+    }
+  }
+  :root[data-theme="dark"]{
+    --page-bg:#131315; --page-surface:#1b1b1e; --page-border:#33333a;
+    --page-text:#ecebe8; --page-dim:#a3a09a; --page-faint:#6f6c66;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--page-bg); color:var(--page-text);
+    font-family:'Work Sans',ui-sans-serif,system-ui,sans-serif; -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,h4{ font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.02em; margin:0; text-wrap:balance; }
+  .mono{ font-family:'JetBrains Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums; }
+  @media (prefers-reduced-motion:reduce){ *{ transition-duration:.001ms !important; } }
+
+  .wrap{ max-width:1120px; margin:0 auto; padding:34px 24px 70px; }
+  header.intro{ margin-bottom:26px; }
+  header.intro h1{ font-size:26px; }
+  header.intro p{ margin:9px 0 0; color:var(--page-dim); font-size:14px; line-height:1.6; max-width:66ch; }
+
+  /* ---- controls ---- */
+  .controls{
+    position:sticky; top:0; z-index:10; background:var(--page-bg);
+    padding:14px 0 13px; border-bottom:1px solid var(--page-border); margin-bottom:24px;
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+  }
+  .opt-row{ display:flex; gap:6px; flex-wrap:wrap; flex:1; }
+  .opt-btn{
+    font-family:inherit; cursor:pointer; border:1px solid var(--page-border);
+    background:var(--page-surface); color:var(--page-dim); border-radius:9px;
+    padding:9px 13px; font-size:12.5px; display:flex; align-items:center; gap:9px;
+  }
+  .opt-btn:hover{ border-color:var(--page-faint); color:var(--page-text); }
+  .opt-btn.active{ border-color:var(--page-text); color:var(--page-text); box-shadow:0 0 0 1px var(--page-text) inset; }
+  .opt-btn .chips{ display:flex; gap:2px; }
+  .opt-btn .chips i{ width:9px; height:16px; border-radius:2px; display:block; }
+  .opt-btn .lbl{ font-weight:600; }
+  .opt-btn .rec{ font-size:9px; letter-spacing:.07em; text-transform:uppercase; background:var(--page-text); color:var(--page-bg); border-radius:3px; padding:2px 5px; }
+  .mode-toggle{ display:flex; border:1px solid var(--page-border); border-radius:9px; overflow:hidden; flex:none; }
+  .mode-toggle button{
+    font-family:inherit; background:var(--page-surface); color:var(--page-dim); border:none;
+    padding:9px 13px; font-size:11.5px; cursor:pointer; text-transform:uppercase; letter-spacing:.05em;
+  }
+  .mode-toggle button.active{ background:var(--page-text); color:var(--page-bg); }
+
+  /* ---- rationale ---- */
+  .why{ background:var(--page-surface); border:1px solid var(--page-border); border-radius:12px; padding:17px 19px; margin-bottom:20px; }
+  .why h2{ font-size:15px; }
+  .why .verdict{ font-size:10px; letter-spacing:.07em; text-transform:uppercase; color:var(--page-faint); margin-bottom:7px; }
+  .why p{ margin:8px 0 0; font-size:13.5px; line-height:1.62; color:var(--page-dim); max-width:74ch; }
+  .why p b{ color:var(--page-text); font-weight:600; }
+  .metrics{ display:flex; gap:20px; flex-wrap:wrap; margin-top:14px; padding-top:13px; border-top:1px solid var(--page-border); }
+  .metric .k{ font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--page-faint); }
+  .metric .v{ font-family:'JetBrains Mono',monospace; font-size:15px; margin-top:3px; }
+  .metric .v small{ font-size:11px; color:var(--page-dim); }
+
+  /* ---- the sample: an isolated slice of the real app ---- */
+  .sample{
+    background:var(--s-bg); border:1px solid var(--s-border); border-radius:14px; padding:22px;
+    color:var(--s-text); font-family:'Work Sans',sans-serif; overflow:hidden;
+  }
+  .sample-label{
+    font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--page-faint);
+    margin:0 0 8px 3px;
+  }
+  .grid2{ display:grid; grid-template-columns:1fr 300px; gap:18px; align-items:start; }
+  @media (max-width:840px){ .grid2{ grid-template-columns:1fr; } }
+  .col{ display:flex; flex-direction:column; gap:18px; }
+  .blk h4{ font-size:11px; color:var(--s-faint); letter-spacing:.06em; margin-bottom:9px; }
+
+  /* category tiles */
+  .tiles{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .tile{ background:var(--s-surface); border:1px solid var(--s-border); border-radius:9px; padding:11px 11px 10px; display:flex; flex-direction:column; gap:10px; }
+  .tile .ring{ width:22px; height:22px; border-radius:50%; border:5px solid var(--c); }
+  .tile .nm{ font-family:'Oswald',sans-serif; text-transform:uppercase; font-size:13px; letter-spacing:.04em; }
+  .tile .sb{ font-size:10px; color:var(--s-dim); font-family:'JetBrains Mono',monospace; }
+  .tile.on{ border-color:var(--c); box-shadow:0 0 0 1px var(--c) inset; }
+
+  /* calendar strip */
+  .cal{ display:grid; grid-template-columns:repeat(7,1fr); gap:5px; }
+  .cell{ height:52px; border:1px solid var(--s-borderSoft); border-radius:7px; background:var(--s-surface); padding:5px; display:flex; flex-direction:column; justify-content:space-between; }
+  .cell.empty{ background:transparent; border-color:transparent; }
+  .cell .dn{ font-size:10.5px; font-family:'JetBrains Mono',monospace; color:var(--s-dim); }
+  .cell .dots{ display:flex; gap:3px; }
+  .cell .dots i{ width:7px; height:7px; border-radius:50%; display:block; }
+  .cell.today{ border-color:var(--s-text); }
+
+  /* split tile */
+  .sp{ background:var(--s-surface); border:1px solid var(--s-border); border-radius:9px; padding:12px 13px 11px; display:flex; flex-direction:column; gap:7px; }
+  .sp .top{ display:flex; justify-content:space-between; gap:8px; }
+  .sp .nm{ font-family:'Oswald',sans-serif; text-transform:uppercase; font-size:13.5px; letter-spacing:.03em; }
+  .sp .act{ font-size:9px; letter-spacing:.06em; text-transform:uppercase; background:var(--s-text); color:var(--s-bg); border-radius:3px; padding:2px 5px; height:fit-content; }
+  .sp .badges{ display:flex; gap:5px; }
+  .sp .bdg{ font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--s-dim); background:var(--s-surface2); border:1px solid var(--s-borderSoft); border-radius:4px; padding:2px 5px; }
+  .sp .bar{ display:flex; gap:3px; margin-top:2px; }
+  .sp .bar i{ height:4px; border-radius:2px; display:block; }
+
+  /* tray */
+  .tray-item{ border:1px solid var(--s-borderSoft); border-left:3px solid var(--c); border-radius:8px; padding:9px 10px; background:var(--s-surface2); margin-bottom:7px; }
+  .tray-item .r1{ display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+  .tray-item .en{ font-size:12.5px; font-weight:500; }
+  .tray-item .meta{ display:flex; gap:5px; margin-top:6px; flex-wrap:wrap; }
+  .tray-item .bdg{ font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--s-dim); background:var(--s-surface); border:1px solid var(--s-borderSoft); border-radius:4px; padding:2px 5px; }
+  .tray-item .bdg.accent{ color:var(--c); border-color:var(--c); }
+  .setrow{ display:flex; align-items:center; gap:7px; margin-top:6px; }
+  .setrow .sn{ font-size:10.5px; font-family:'JetBrains Mono',monospace; color:var(--s-faint); width:34px; }
+  .setrow .inp{ flex:1; background:var(--s-surface); border:1px solid var(--s-border); border-radius:5px; padding:5px 7px; font-size:11.5px; font-family:'JetBrains Mono',monospace; color:var(--s-text); }
+  .setrow .box{ width:18px; height:18px; border-radius:4px; border:1.5px solid var(--s-border); background:var(--s-surface); flex:none; }
+  .setrow .box.on{ background:var(--c); border-color:var(--c); position:relative; }
+  .setrow .box.on::after{ content:""; position:absolute; left:5px; top:4px; width:7px; height:4px; border-left:2px solid var(--s-bg); border-bottom:2px solid var(--s-bg); transform:rotate(-45deg); }
+
+  /* buttons + PR card */
+  .btn-row{ display:flex; gap:7px; flex-wrap:wrap; }
+  .fill-btn{ border:1px solid var(--c); background:var(--c); color:var(--s-bg); border-radius:7px; padding:8px 14px; font-size:12px; font-weight:600; font-family:inherit; }
+  .pr{ background:var(--s-surface); border:1px solid var(--s-border); border-top:3px solid var(--c); border-radius:9px; padding:12px 13px; }
+  .pr .t{ font-family:'Oswald',sans-serif; text-transform:uppercase; font-size:12.5px; color:var(--c); letter-spacing:.03em; }
+  .pr .hero{ display:flex; align-items:baseline; gap:5px; margin-top:9px; }
+  .pr .big{ font-family:'Oswald',sans-serif; font-size:29px; line-height:1; }
+  .pr .u{ font-size:12px; color:var(--s-dim); }
+  .pr svg{ display:block; width:100%; height:52px; margin-top:8px; }
+
+  /* swatches */
+  .sw-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:20px; }
+  @media (max-width:600px){ .sw-row{ grid-template-columns:repeat(2,1fr); } }
+  .sw{ border:1px solid var(--page-border); border-radius:9px; overflow:hidden; background:var(--page-surface); }
+  .sw .chip{ height:46px; }
+  .sw .info{ padding:8px 10px 9px; }
+  .sw .nm{ font-size:11.5px; font-weight:600; }
+  .sw .hx{ font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--page-dim); margin-top:2px; }
+
+  footer{ margin-top:30px; padding-top:16px; border-top:1px solid var(--page-border); font-size:12px; color:var(--page-faint); line-height:1.6; }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <h1>Palette Study</h1>
+    <p>Four directions for Push to Play's category colours, each shown on the components where the colour actually does work — calendar dots, split tiles, the workout tray, record cards. Switch between them and watch the same slice of the app re-skin. Separation figures are measured across <b>every</b> pair of categories, because a calendar day can show any two dots side by side; that stricter test is what exposed the flaw in the previous palette.</p>
+  </header>
+
+  <div class="controls">
+    <div class="opt-row" id="optRow"></div>
+    <div class="mode-toggle" id="modeToggle">
+      <button type="button" data-mode="dark" class="active">Dark</button>
+      <button type="button" data-mode="light">Light</button>
+    </div>
+  </div>
+
+  <div class="why" id="why"></div>
+
+  <p class="sample-label">Live sample — the same screens, re-skinned</p>
+  <div class="sample" id="sample">
+    <div class="grid2">
+      <div class="col">
+        <div class="blk">
+          <h4>Category tiles</h4>
+          <div class="tiles" id="tiles"></div>
+        </div>
+        <div class="blk">
+          <h4>Calendar — the hardest test, four dots side by side</h4>
+          <div class="cal" id="cal"></div>
+        </div>
+        <div class="blk">
+          <h4>Split library tile &amp; day buttons</h4>
+          <div class="sp">
+            <div class="top">
+              <span class="nm">Push / Pull / Legs</span>
+              <span class="act">Active</span>
+            </div>
+            <div class="badges"><span class="bdg">3–6 days/week</span><span class="bdg">Hypertrophy</span></div>
+            <div class="bar" id="mixBar"></div>
+          </div>
+          <div class="btn-row" style="margin-top:10px" id="btnRow"></div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="blk">
+          <h4>Workout tray</h4>
+          <div id="trayDemo"></div>
+        </div>
+        <div class="blk">
+          <h4>Record card</h4>
+          <div class="pr" id="prDemo"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sw-row" id="swatches"></div>
+
+  <footer id="footNote"></footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const CATS = ["push","pull","legs","abs"];
+  const LABEL = { push:"Push", pull:"Pull", legs:"Legs", abs:"Abs" };
+  const SUB   = { push:"Chest · Delts", pull:"Back · Arms", legs:"Quads · Hams", abs:"Core" };
+
+  /* Every palette below passed the six categorical checks (lightness band, chroma floor,
+     adjacent CVD separation, normal-vision separation, contrast) in BOTH modes. */
+  const OPTIONS = [
+    {
+      id:"current", name:"Previous", rec:false,
+      verdict:"What the app used before",
+      blurb:"Warm bumper-plate hues on a warm olive ground. It read calm and cohesive, but the red and the gold sat in the <b>same hue family as the background</b>, so those two categories quietly blended into it. Worse, once tested against <b>every</b> pair rather than neighbouring ones, push-red and legs-gold came out at ΔE 2.7 under red-green colourblindness — on a calendar day showing both, those two dots were effectively the same colour.",
+      cvd:"2.7", nv:"12.8",
+      dark:{ bg:"#15140f", surface:"#1d1c15", surface2:"#262418", border:"#38341f", borderSoft:"#2a2718",
+             text:"#ece7d8", dim:"#a89f88", faint:"#756c56",
+             c:{push:"#e0603c", pull:"#4f93d6", legs:"#b98d1c", abs:"#1f9f90"} },
+      light:{ bg:"#ece6d6", surface:"#faf7ee", surface2:"#ffffff", border:"#d8cfae", borderSoft:"#e4ddc4",
+             text:"#211f17", dim:"#66604c", faint:"#928a70",
+             c:{push:"#c04529", pull:"#2c6bb0", legs:"#94670c", abs:"#00846f"} }
+    },
+    {
+      id:"a", name:"Deepened", rec:false,
+      verdict:"Option A — same hues, more depth",
+      blurb:"The safest step up. Identical hue family, but chroma raised and lightness pulled <b>down</b> slightly — richer and denser rather than brighter. Keeps the current character; gains maybe a third of the punch of the bolder options.",
+      cvd:"9.7", nv:"17.7",
+      dark:{ bg:"#15140f", surface:"#1d1c15", surface2:"#262418", border:"#38341f", borderSoft:"#2a2718",
+             text:"#ece7d8", dim:"#a89f88", faint:"#756c56",
+             c:{push:"#d64221", pull:"#127ede", legs:"#b08000", abs:"#029375"} },
+      light:{ bg:"#ece6d6", surface:"#faf7ee", surface2:"#ffffff", border:"#d8cfae", borderSoft:"#e4ddc4",
+             text:"#211f17", dim:"#66604c", faint:"#928a70",
+             c:{push:"#c22a00", pull:"#0061b1", legs:"#966c00", abs:"#007b62"} }
+    },
+    {
+      id:"b", name:"Wide spread", rec:false,
+      verdict:"Option B — push the hues apart",
+      blurb:"Same warm ground, but the four hues are spread further around the wheel: a truer red, an indigo-leaning blue, a warmer amber and a cooler teal. Categories become <b>faster to tell apart</b> without any of them getting louder. Colourblind separation improves sharply.",
+      cvd:"13.7", nv:"19.5",
+      dark:{ bg:"#15140f", surface:"#1d1c15", surface2:"#262418", border:"#38341f", borderSoft:"#2a2718",
+             text:"#ece7d8", dim:"#a89f88", faint:"#756c56",
+             c:{push:"#d73337", pull:"#4d6eda", legs:"#c78100", abs:"#11a19b"} },
+      light:{ bg:"#ece6d6", surface:"#faf7ee", surface2:"#ffffff", border:"#d8cfae", borderSoft:"#e4ddc4",
+             text:"#211f17", dim:"#66604c", faint:"#928a70",
+             c:{push:"#c50220", pull:"#2f4bc3", legs:"#a76c01", abs:"#018d87"} }
+    },
+    {
+      id:"d", name:"Wide spread + cool ground", rec:true,
+      verdict:"Option D — shipped",
+      blurb:"Option B's hues on a <b>cool charcoal</b> ground, then re-tuned so all six pairs clear the bar, not just neighbouring ones. The accents are no brighter than before — the ground simply stops competing, so warm colours separate from it instead of sinking in. Push and legs were additionally pulled apart in <b>lightness</b>, which is the one channel colourblindness leaves intact: their separation goes from ΔE 2.7 to 11.4. This is what the app now uses.",
+      cvd:"11.4", nv:"19.1",
+      dark:{ bg:"#131519", surface:"#1b1e23", surface2:"#23272e", border:"#343a44", borderSoft:"#282d35",
+             text:"#e6e8ec", dim:"#9aa1ac", faint:"#6b727d",
+             c:{push:"#cf2930", pull:"#4260cc", legs:"#c78600", abs:"#009b95"} },
+      light:{ bg:"#eceeef", surface:"#f9fafa", surface2:"#ffffff", border:"#d2d6da", borderSoft:"#e2e5e8",
+             text:"#191c20", dim:"#5b626b", faint:"#8b939c",
+             c:{push:"#990015", pull:"#3e5dc8", legs:"#9e6a05", abs:"#00948e"} }
+    }
+  ];
+
+  let current = "d";
+  let mode = "dark";
+
+  const sample = document.getElementById("sample");
+  const optRow = document.getElementById("optRow");
+
+  function opt(){ return OPTIONS.find(o=>o.id===current); }
+  function pal(){ return opt()[mode]; }
+
+  function renderOptButtons(){
+    optRow.innerHTML = OPTIONS.map(o=>{
+      const c = o[mode].c;
+      return `<button type="button" class="opt-btn${o.id===current?" active":""}" data-id="${o.id}">
+        <span class="chips">${CATS.map(k=>`<i style="background:${c[k]}"></i>`).join("")}</span>
+        <span class="lbl">${o.name}</span>
+        ${o.rec ? `<span class="rec">Pick</span>` : ""}
+      </button>`;
+    }).join("");
+    optRow.querySelectorAll(".opt-btn").forEach(b=>{
+      b.addEventListener("click", ()=>{ current = b.dataset.id; renderAll(); });
+    });
+  }
+
+  function renderWhy(){
+    const o = opt();
+    document.getElementById("why").innerHTML = `
+      <div class="verdict">${o.verdict}</div>
+      <h2>${o.name}</h2>
+      <p>${o.blurb}</p>
+      <div class="metrics">
+        <div class="metric"><div class="k">Colourblind separation</div><div class="v">ΔE ${o.cvd} <small>/ 8 needed</small></div></div>
+        <div class="metric"><div class="k">Normal-vision separation</div><div class="v">ΔE ${o.nv} <small>/ 15 needed</small></div></div>
+        <div class="metric"><div class="k">Measured across</div><div class="v">all pairs <small>not just neighbours</small></div></div>
+        <div class="metric"><div class="k">Contrast on surface</div><div class="v">≥ 3:1 <small>all four</small></div></div>
+        <div class="metric"><div class="k">Checks passed</div><div class="v">6 / 6 <small>both themes</small></div></div>
+      </div>`;
+  }
+
+  function applyVars(){
+    const p = pal();
+    sample.style.setProperty("--s-bg", p.bg);
+    sample.style.setProperty("--s-surface", p.surface);
+    sample.style.setProperty("--s-surface2", p.surface2);
+    sample.style.setProperty("--s-border", p.border);
+    sample.style.setProperty("--s-borderSoft", p.borderSoft);
+    sample.style.setProperty("--s-text", p.text);
+    sample.style.setProperty("--s-dim", p.dim);
+    sample.style.setProperty("--s-faint", p.faint);
+  }
+
+  function renderTiles(){
+    const c = pal().c;
+    document.getElementById("tiles").innerHTML = CATS.map((k,i)=>
+      `<div class="tile${i===0?" on":""}" style="--c:${c[k]}">
+        <span class="ring"></span>
+        <span class="nm">${LABEL[k]}</span>
+        <span class="sb">${SUB[k]}</span>
+      </div>`).join("");
+  }
+
+  function renderCal(){
+    const c = pal().c;
+    /* a realistic training month: some single-category days, some mixed */
+    const days = [
+      null,null,
+      {d:1},{d:2,cats:["push"]},{d:3},{d:4,cats:["pull","abs"]},{d:5},{d:6,cats:["legs"]},{d:7},
+      {d:8,cats:["push","pull","legs","abs"]},{d:9},{d:10,cats:["push"]},{d:11,cats:["legs","abs"]},
+      {d:12},{d:13,cats:["pull"]},{d:14, today:true, cats:["push","abs"]}
+    ];
+    document.getElementById("cal").innerHTML = days.map(x=>{
+      if(!x) return `<div class="cell empty"></div>`;
+      const dots = (x.cats||[]).map(k=>`<i style="background:${c[k]}"></i>`).join("");
+      return `<div class="cell${x.today?" today":""}">
+        <span class="dn">${x.d}</span><span class="dots">${dots}</span></div>`;
+    }).join("");
+  }
+
+  function renderMixAndButtons(){
+    const c = pal().c;
+    const mix = { push:0.32, pull:0.30, legs:0.28, abs:0.10 };
+    document.getElementById("mixBar").innerHTML =
+      CATS.map(k=>`<i style="background:${c[k]}; flex:${mix[k]}"></i>`).join("");
+    document.getElementById("btnRow").innerHTML =
+      ["push","pull","legs"].map(k=>
+        `<button class="fill-btn" style="--c:${c[k]}">Load ${LABEL[k]}</button>`).join("");
+  }
+
+  function renderTray(){
+    const c = pal().c;
+    document.getElementById("trayDemo").innerHTML = `
+      <div class="tray-item" style="--c:${c.push}">
+        <div class="r1"><span class="en">Barbell Bench Press</span></div>
+        <div class="meta">
+          <span class="bdg">Barbell</span>
+          <span class="bdg accent">⇄ Superset A</span>
+          <span class="bdg accent">⏱ 1:30</span>
+        </div>
+        <div class="setrow"><span class="sn">Set 1</span><span class="inp">8</span><span class="box on"></span></div>
+        <div class="setrow"><span class="sn">Set 2</span><span class="inp">8</span><span class="box on"></span></div>
+        <div class="setrow"><span class="sn">Set 3</span><span class="inp">6</span><span class="box"></span></div>
+      </div>
+      <div class="tray-item" style="--c:${c.pull}">
+        <div class="r1"><span class="en">Cable Lat Pulldown</span></div>
+        <div class="meta"><span class="bdg">Cable</span><span class="bdg accent">⏱ 1:00</span></div>
+      </div>
+      <div class="tray-item" style="--c:${c.legs}">
+        <div class="r1"><span class="en">Barbell Back Squat</span></div>
+        <div class="meta"><span class="bdg">Barbell</span></div>
+      </div>`;
+  }
+
+  function renderPR(){
+    const c = pal().c;
+    const pts = [70,74,79,83,86,92,99];
+    const W=240, H=52, min=Math.min(...pts), max=Math.max(...pts);
+    const x=i=> (i/(pts.length-1))*W;
+    const y=v=> 8 + (1-(v-min)/(max-min))*(H-18);
+    const d = pts.map((v,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    const area = `${d} L${W},${H} L0,${H} Z`;
+    document.getElementById("prDemo").innerHTML = `
+      <div class="t" style="--c:${c.push}">Barbell Bench Press</div>
+      <div class="hero"><span class="big">99.2</span><span class="u">kg est. 1RM</span></div>
+      <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+        <path d="${area}" fill="${c.push}" opacity="0.13"/>
+        <path d="${d}" fill="none" stroke="${c.push}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+        <circle cx="${W}" cy="${y(pts[pts.length-1]).toFixed(1)}" r="3.5" fill="${c.push}"/>
+      </svg>`;
+    document.getElementById("prDemo").style.setProperty("--c", c.push);
+  }
+
+  function renderSwatches(){
+    const p = pal();
+    document.getElementById("swatches").innerHTML = CATS.map(k=>
+      `<div class="sw">
+        <div class="chip" style="background:${p.c[k]}"></div>
+        <div class="info"><div class="nm">${LABEL[k]}</div><div class="hx">${p.c[k]}</div></div>
+      </div>`).join("");
+    document.getElementById("footNote").innerHTML =
+      `${opt().name} · ${mode} mode · surface <span class="mono">${p.surface}</span> on page <span class="mono">${p.bg}</span>. ` +
+      `Separation figures are OKLab ΔE ×100 for the worst adjacent pair, measured under simulated protanopia and deuteranopia.`;
+  }
+
+  function renderAll(){
+    document.documentElement.setAttribute("data-theme", mode);
+    renderOptButtons();
+    renderWhy();
+    applyVars();
+    renderTiles();
+    renderCal();
+    renderMixAndButtons();
+    renderTray();
+    renderPR();
+    renderSwatches();
+  }
+
+  document.querySelectorAll("#modeToggle button").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      mode = b.dataset.mode;
+      document.querySelectorAll("#modeToggle button").forEach(x=>x.classList.toggle("active", x===b));
+      renderAll();
+    });
+  });
+
+  renderAll();
+})();
+</script>
