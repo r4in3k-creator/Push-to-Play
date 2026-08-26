@@ -1,7 +1,7 @@
 # Push to Play
 
 A workout app in a single self-contained HTML file. No build step, no server, no sign-in —
-open `push-to-play.html` in a browser and it works. Everything you enter is stored in that
+open `index.html` in a browser and it works. Everything you enter is stored in that
 browser's local storage on that device.
 
 Exercises are categorised **Push / Pull / Legs / Abs**, sourced from the
@@ -14,7 +14,7 @@ Not affiliated with ExRx.net.
 Open the file. That's it.
 
 ```
-open push-to-play.html
+open index.html
 ```
 
 It is deliberately dependency-free: all CSS and JavaScript are inline, and the only external
@@ -65,9 +65,56 @@ programme session by session.
 ## Repository layout
 
 ```
-push-to-play.html          the entire application
+index.html                 the entire application
+manifest.webmanifest       PWA metadata (name, icons, standalone display)
+sw.js                      service worker — offline caching
+icons/                     app icons, including maskable variants
 docs/palette-study.html    live comparison of the colour directions considered
 ```
+
+## Putting it on the web
+
+The app is a **progressive web app**: served over HTTPS it can be installed to a
+phone home screen or a desktop dock and then runs full screen and offline. Any
+static host works — it is four files and a folder of icons, no build step.
+
+### GitHub Pages
+
+```bash
+git remote add origin https://github.com/<username>/push-to-play.git
+git push -u origin main
+```
+
+Then in the repo: **Settings → Pages → Source: Deploy from a branch → `main` / `root`**.
+A minute later it is live at `https://<username>.github.io/push-to-play/`.
+
+Paths in the manifest and service worker are relative, so it works from a
+subdirectory like that without changes.
+
+### Installing it
+
+- **Android / Chrome / Edge** — open the site, then use the install button under
+  Settings, or the browser's own "Install app" prompt.
+- **iPhone / Safari** — Share → Add to Home Screen. Settings shows the steps.
+- **Desktop Chrome / Edge** — an install icon appears in the address bar.
+
+Once installed it opens without browser chrome and works with no signal, which is
+the point in a gym basement.
+
+### Updating it
+
+Push to `main`. The service worker fetches the page from the network first when
+there is a connection, so the next launch picks up the new version; the cached
+copy is only used when offline. Bump `VERSION` in `sw.js` when you change the
+cached file list.
+
+### Your data
+
+Everything lives in the browser's local storage, keyed to the site's origin — it
+never leaves the device and there is no account. That means data does **not**
+follow you between browsers or devices; use **Settings → Export my data** for a
+backup, and Share to move a workout to someone else. Clearing site data clears the
+history, so export before you do that.
 
 ## Notes for future edits
 

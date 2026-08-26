@@ -3,6 +3,13 @@
 <meta name="theme-color" content="#131519" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#eceeef" media="(prefers-color-scheme: light)">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Push to Play">
+<meta name="description" content="Push / Pull / Legs / Abs workout tracker — split templates, set-by-set logging, training calendar and personal records.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
   /* ================= Tokens — dark-first (a gym tool lives on a dim screen) =================
@@ -96,6 +103,9 @@
   }
 
   *{ box-sizing: border-box; }
+  /* An author `display` beats the UA rule for [hidden], so state it explicitly —
+     otherwise hiding a flex/grid element via the attribute silently does nothing. */
+  [hidden]{ display: none !important; }
   html,body{ margin:0; padding:0; }
   body{
     background: var(--bg);
@@ -639,6 +649,8 @@
 
   /* ================= Share & Import ================= */
   #view-settings .form-card{ max-width: 780px; }
+  .ios-steps{ margin:12px 0 0; padding-left:20px; font-size:12.5px; color: var(--text-dim); line-height:1.7; }
+  .ios-steps b{ color: var(--text); }
   .share-card{ max-width: 780px; margin-top:16px; }
   .share-card h3{ font-size:14px; }
   .share-card .lede{ font-size:12.5px; color: var(--text-dim); margin:5px 0 14px; max-width:64ch; }
@@ -1007,6 +1019,20 @@
             <button type="button" class="btn btn-danger" id="stClearHistory">Delete workout history</button>
             <button type="button" class="btn btn-danger" id="stClearPRs">Delete all records</button>
           </div>
+        </div>
+
+        <!-- ---- Install ---- -->
+        <div class="panel share-card" id="installCard" hidden>
+          <h3>Install on this device</h3>
+          <p class="lede" id="installLede">Add Push to Play to your home screen and it opens like an app — full screen, no browser chrome, and it works without a signal.</p>
+          <div class="share-actions" id="installActions">
+            <button type="button" class="btn btn-primary" id="installBtn">Install</button>
+          </div>
+          <ol class="ios-steps" id="iosSteps" hidden>
+            <li>Tap the <b>Share</b> button in Safari's toolbar.</li>
+            <li>Scroll down and choose <b>Add to Home Screen</b>.</li>
+            <li>Tap <b>Add</b>. It appears on your home screen like any other app.</li>
+          </ol>
         </div>
 
         <!-- ---- Share ---- -->
@@ -1638,7 +1664,7 @@
     if(view === "calendar") renderCalendar();
     if(view === "records")  renderRecords();
     if(view === "account")  fillAccountForm();
-    if(view === "settings"){ fillSettingsForm(); renderShare(); }
+    if(view === "settings"){ fillSettingsForm(); renderShare(); refreshInstallCard(); }
     syncTrayFab();
     window.scrollTo({top:0, behavior:"instant"});
   }
@@ -3449,6 +3475,78 @@
   document.getElementById("trayBack").addEventListener("click", ()=>{
     document.getElementById("groups").scrollIntoView({ behavior:"smooth", block:"start" });
   });
+
+  /* ================= Install as an app =================
+     Chrome/Edge/Android fire beforeinstallprompt and let us trigger the real
+     install dialog. iOS Safari has no such event — Add to Home Screen is manual —
+     so there we show the steps instead of a dead button. */
+  const installCard = document.getElementById("installCard");
+  const installBtn  = document.getElementById("installBtn");
+  const installLede = document.getElementById("installLede");
+  const iosSteps    = document.getElementById("iosSteps");
+  const installActions = document.getElementById("installActions");
+  let deferredInstall = null;
+
+  function isStandalone(){
+    return window.matchMedia("(display-mode: standalone)").matches ||
+           window.navigator.standalone === true;
+  }
+  function isIOS(){
+    return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+           (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  }
+
+  function refreshInstallCard(){
+    if(isStandalone()){
+      installCard.hidden = false;
+      installLede.textContent = "Push to Play is installed on this device and running as an app.";
+      installActions.hidden = true;
+      iosSteps.hidden = true;
+      return;
+    }
+    if(deferredInstall){
+      installCard.hidden = false;
+      installActions.hidden = false;
+      iosSteps.hidden = true;
+      return;
+    }
+    if(isIOS()){
+      installCard.hidden = false;
+      installActions.hidden = true;
+      iosSteps.hidden = false;
+      return;
+    }
+    installCard.hidden = true;
+  }
+
+  window.addEventListener("beforeinstallprompt", (e)=>{
+    e.preventDefault();
+    deferredInstall = e;
+    refreshInstallCard();
+  });
+  window.addEventListener("appinstalled", ()=>{
+    deferredInstall = null;
+    refreshInstallCard();
+    showToast("Installed — look for it on your home screen");
+  });
+
+  installBtn.addEventListener("click", async ()=>{
+    if(!deferredInstall) return;
+    deferredInstall.prompt();
+    try{
+      const { outcome } = await deferredInstall.userChoice;
+      if(outcome !== "accepted") showToast("Install cancelled");
+    }catch(e){ /* the browser dismissed it */ }
+    deferredInstall = null;
+    refreshInstallCard();
+  });
+
+  /* Service worker: only over https or localhost, and never from file:// */
+  if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+    window.addEventListener("load", ()=>{
+      navigator.serviceWorker.register("sw.js").catch(()=>{ /* offline support is optional */ });
+    });
+  }
 
   /* ================= Toast ================= */
   let toastTimer = null;
