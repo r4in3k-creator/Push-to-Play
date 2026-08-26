@@ -1,4 +1,8 @@
 <title>Push to Play</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#131519" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#eceeef" media="(prefers-color-scheme: light)">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
   /* ================= Tokens — dark-first (a gym tool lives on a dim screen) =================
@@ -192,7 +196,64 @@
   @media (max-width: 920px){
     main{ padding:18px 16px 110px; }
     .layout{ grid-template-columns: 1fr; }
+
+    /* On a phone the tray is a block in the flow, not a sticky column — a capped
+       height here would nest a second scroll area inside the page scroll. */
+    .tray{ position: static; max-height: none; box-shadow: none; }
+    .tray-list{ overflow-y: visible; max-height: none; }
+
+    /* Reclaim the header: the tagline is decoration, and Account + Settings are
+       already one tap away in the avatar menu, so they leave the tab bar. */
+    header{ padding: 12px 16px 0; }
+    .brand-text p{ display: none; }
+    .brand-text h1{ font-size: 19px; }
+    .plate-mark{ width: 30px; height: 30px; }
+    .header-top{ gap: 10px; }
+    .count-badge{ padding: 5px 11px; font-size: 12px; }
+    .avatar-btn{ padding: 4px 10px 4px 4px; }
+    .avatar{ width: 24px; height: 24px; font-size: 11px; }
+    .viewtabs{ margin-top: 10px; }
+    .viewtab{ padding: 9px 12px 10px; font-size: 12px; }
+    .viewtab[data-view="account"], .viewtab[data-view="settings"]{ display: none; }
+
+    .view-intro p{ font-size: 12.5px; }
+    .splits{ padding: 13px 13px 12px; }
+    .tiles{ gap: 8px; }
+    .tile{ padding: 11px 11px 10px; gap: 10px; }
+    .tile .ring{ width: 20px; height: 20px; border-width: 4px; }
   }
+
+  /* Notched phones: keep content clear of the home indicator and rounded corners */
+  @supports (padding: max(0px)){
+    @media (max-width: 920px){
+      header{ padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+      main{ padding-bottom: max(110px, calc(env(safe-area-inset-bottom) + 96px)); }
+    }
+  }
+
+  /* Jump-to-workout pill — phone only, and only once there's something to jump to */
+  .tray-fab{
+    display: none;
+    position: fixed; right: 16px; bottom: max(16px, env(safe-area-inset-bottom));
+    z-index: 45; align-items: center; gap: 8px;
+    background: var(--text); color: var(--bg); border: none; border-radius: 999px;
+    padding: 12px 18px; font-family: 'Oswald', sans-serif; text-transform: uppercase;
+    letter-spacing: .04em; font-size: 13px; cursor: pointer;
+    box-shadow: 0 8px 22px -8px rgba(0,0,0,.55);
+  }
+  .tray-fab .fab-count{
+    font-family: 'JetBrains Mono', monospace; background: var(--bg); color: var(--text);
+    border-radius: 999px; padding: 1px 8px; font-size: 12px;
+  }
+  @media (max-width: 920px){
+    .tray-fab.show{ display: inline-flex; }
+  }
+  .tray-back{
+    display: none; background: none; border: none; color: var(--text-dim);
+    font-family: inherit; font-size: 12px; cursor: pointer; padding: 0 0 10px;
+  }
+  .tray-back:hover{ color: var(--text); }
+  @media (max-width: 920px){ .tray-back{ display: block; } }
   .view{ display:none; }
   .view.active{ display:block; }
   .view-intro{ margin-bottom:18px; }
@@ -965,6 +1026,7 @@
 
     <!-- ============ TRAY (Train view only) ============ -->
     <aside class="tray" id="trayPanel">
+      <button type="button" class="tray-back" id="trayBack">↑ Back to exercises</button>
       <h2>Your Workout</h2>
       <p class="sub">Tap + to log reps per set — saved automatically in this browser</p>
       <div class="tray-list" id="trayList"></div>
@@ -987,6 +1049,10 @@
   <a href="https://exrx.net/Workouts/Workout3PPL" target="_blank" rel="noopener">3-Day Push/Pull/Legs template</a>.
   <span>Not affiliated with ExRx.net.</span>
 </footer>
+
+<button type="button" class="tray-fab" id="trayFab" aria-label="Jump to your workout">
+  Workout <span class="fab-count" id="fabCount">0</span>
+</button>
 
 <div class="toast" id="toast"></div>
 
@@ -1530,6 +1596,7 @@
     if(view === "records")  renderRecords();
     if(view === "account")  fillAccountForm();
     if(view === "settings"){ fillSettingsForm(); renderShare(); }
+    syncTrayFab();
     window.scrollTo({top:0, behavior:"instant"});
   }
   document.querySelectorAll(".viewtab").forEach(tab=>{
@@ -1776,6 +1843,7 @@
 
   function renderTray(){
     trayCountEl.textContent = tray.length;
+    syncTrayFab();
     trayListEl.innerHTML = "";
     trayEmptyEl.style.display = tray.length ? "none" : "block";
     const labels = supersetLabels();
@@ -3318,6 +3386,25 @@
     reader.onerror = ()=> renderImport({ ok:false, msg:"Couldn't read that file." });
     reader.readAsText(file);
     e.target.value = "";
+  });
+
+  /* ================= Mobile: reaching the tray =================
+     On a phone the tray sits below the whole directory, which is the wrong place for
+     the thing you touch most mid-workout. A pill jumps to it, and the tray offers a
+     way back. Both are CSS-hidden above 920px. */
+  const trayFab = document.getElementById("trayFab");
+  const fabCount = document.getElementById("fabCount");
+
+  function syncTrayFab(){
+    const show = currentView === "train" && tray.length > 0;
+    trayFab.classList.toggle("show", show);
+    fabCount.textContent = tray.length;
+  }
+  trayFab.addEventListener("click", ()=>{
+    document.getElementById("trayPanel").scrollIntoView({ behavior:"smooth", block:"start" });
+  });
+  document.getElementById("trayBack").addEventListener("click", ()=>{
+    document.getElementById("groups").scrollIntoView({ behavior:"smooth", block:"start" });
   });
 
   /* ================= Toast ================= */
