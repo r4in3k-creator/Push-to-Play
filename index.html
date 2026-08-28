@@ -204,6 +204,10 @@
   /* ================= Layout ================= */
   main{ max-width:1180px; margin:0 auto; padding: 22px 28px 80px; }
   .layout{ display:grid; grid-template-columns: 1fr 322px; gap:26px; align-items:start; }
+  /* A grid track's automatic minimum is min-content, and a text input's min-content
+     is its default character width — two per set row was enough to push the column
+     past the viewport. This is the standard grid-blowout guard. */
+  .layout > *{ min-width: 0; }
   .layout.solo{ grid-template-columns: 1fr; }
   @media (max-width: 920px){
     main{ padding: 18px 16px 20px; }
@@ -427,9 +431,14 @@
   .set-rows{ margin-top:10px; padding-top:9px; border-top:1px dashed var(--border-soft); display:flex; flex-direction:column; gap:6px; }
   .set-row{ display:flex; align-items:center; gap:8px; }
   .set-row .set-num{ font-size:11px; color: var(--text-faint); font-family:'JetBrains Mono',monospace; width:42px; flex:none; }
-  .set-row .reps-input{ flex:1; min-width:0; background: var(--surface); border:1px solid var(--border); border-radius:6px; color: var(--text); padding:6px 8px; font-size:12.5px; font-family:'JetBrains Mono',monospace; }
+  .set-head{ display:flex; align-items:center; gap:8px; padding-bottom:1px; }
+  .set-head .col-lbl{ flex:1; min-width:0; font-size:8.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); }
+  .set-head .col-spacer{ width:20px; flex:none; }
+  .set-row .set-input{ flex:1; min-width:0; background: var(--surface); border:1px solid var(--border); border-radius:6px; color: var(--text); padding:6px 8px; font-size:12.5px; font-family:'JetBrains Mono',monospace; text-align:center; }
+  .set-row .set-input::placeholder{ color: var(--text-faint); }
+  .set-row .set-input:focus{ outline:none; border-color: var(--item-color, var(--text-faint)); }
   .set-row.done .set-num{ color: var(--item-color); }
-  .set-row.done .reps-input{ opacity:.6; text-decoration: line-through; }
+  .set-row.done .set-input{ opacity:.6; text-decoration: line-through; }
   .check-wrap{ position:relative; flex:none; width:20px; height:20px; cursor:pointer; }
   .check-wrap input{ position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; }
   .check-wrap .checkmark{ position:absolute; inset:0; border:1.5px solid var(--border); border-radius:5px; background: var(--surface); display:flex; align-items:center; justify-content:center; }
@@ -1116,7 +1125,7 @@
     <aside class="tray" id="trayPanel">
       <button type="button" class="tray-back" id="trayBack">↑ Back to exercises</button>
       <h2>Your Workout</h2>
-      <p class="sub">Tap + to log reps per set — saved automatically in this browser</p>
+      <p class="sub">Tap + to log weight and reps per set — saved automatically in this browser</p>
       <div class="tray-list" id="trayList"></div>
       <div class="tray-empty" id="trayEmpty">Add exercises from the list, or load a split day above.</div>
       <div class="tray-actions">
@@ -1583,7 +1592,7 @@
     return {
       id: ex.id, n: ex.n, cat: ex.cat, eq: ex.eq,
       sets,
-      setLog: Array.from({length: sets}, ()=>({reps:"", done:false})),
+      setLog: Array.from({length: sets}, ()=>({reps:"", weight:"", done:false})),
       expanded: false,
       restSeconds: parseInt(settings.defaultRest,10) || 0,
       supersetId: null
@@ -1594,8 +1603,9 @@
       const ex = EX.find(e=>e.id===it.id);
       const sets = Math.max(1, parseInt(it.sets,10) || 3);
       let setLog = Array.isArray(it.setLog) ? it.setLog.slice(0, sets) : [];
-      while(setLog.length < sets) setLog.push({reps:"", done:false});
-      setLog = setLog.map(s=>({ reps:(s && s.reps) || "", done: !!(s && s.done) }));
+      while(setLog.length < sets) setLog.push({reps:"", weight:"", done:false});
+      /* weight was added later — sets saved before that migrate to an empty value */
+      setLog = setLog.map(s=>({ reps:(s && s.reps) || "", weight:(s && s.weight) || "", done: !!(s && s.done) }));
       return {
         id: it.id,
         n: it.n || (ex ? ex.n : "Exercise"),
@@ -1885,10 +1895,23 @@
   function clearItemTimer(id){
     if(timers[id]){ clearInterval(timers[id].intervalId); delete timers[id]; }
   }
+  /* Copy a completed set's numbers into the next set that has none. */
+  function carryForward(item, fromIdx){
+    const src = item.setLog[fromIdx];
+    if(!src || (!src.weight && !src.reps)) return;
+    const next = item.setLog[fromIdx + 1];
+    if(!next || next.done || next.weight || next.reps) return;
+    next.weight = src.weight;
+    next.reps = src.reps;
+  }
+
   function resizeSetLog(item, count){
     count = Math.max(1, Math.min(20, count || 1));
     const log = item.setLog || [];
-    while(log.length < count) log.push({reps:"", done:false});
+    while(log.length < count){
+      const seed = [...log].reverse().find(s=> s.reps || s.weight) || {reps:"", weight:""};
+      log.push({ reps: seed.reps, weight: seed.weight, done:false });
+    }
     while(log.length > count) log.pop();
     item.sets = count; item.setLog = log;
   }
@@ -1959,10 +1982,19 @@
 
       const setRows = item.expanded ? `
         <div class="set-rows">
+          <div class="set-head">
+            <span class="set-num"></span>
+            <span class="col-lbl">Weight (${unit()})</span>
+            <span class="col-lbl">Reps</span>
+            <span class="col-spacer"></span>
+          </div>
           ${item.setLog.map((s,si)=>`
             <div class="set-row${s.done ? " done" : ""}">
               <span class="set-num">Set ${si+1}</span>
-              <input type="text" class="reps-input" inputmode="numeric" data-idx="${si}" placeholder="reps" value="${esc(s.reps)}">
+              <input type="text" size="4" class="set-input weight-input" inputmode="decimal" data-idx="${si}"
+                     placeholder="—" value="${esc(s.weight || "")}" aria-label="Set ${si+1} weight in ${unit()}">
+              <input type="text" size="4" class="set-input reps-input" inputmode="numeric" data-idx="${si}"
+                     placeholder="—" value="${esc(s.reps)}" aria-label="Set ${si+1} reps">
               <label class="check-wrap">
                 <input type="checkbox" data-idx="${si}" ${s.done ? "checked" : ""}>
                 <span class="checkmark" aria-hidden="true"></span>
@@ -2033,6 +2065,12 @@
         if(openMenuFor === item.id) openMenuFor = null;
         persistTray(); renderTray(); renderGroups();
       });
+      row.querySelectorAll(".weight-input").forEach(inp=>{
+        inp.addEventListener("input", ()=>{
+          item.setLog[parseInt(inp.dataset.idx,10)].weight = inp.value;
+          persistTray();
+        });
+      });
       row.querySelectorAll(".reps-input").forEach(inp=>{
         inp.addEventListener("input", ()=>{
           item.setLog[parseInt(inp.dataset.idx,10)].reps = inp.value;
@@ -2041,7 +2079,12 @@
       });
       row.querySelectorAll(".set-row input[type=checkbox]").forEach(cb=>{
         cb.addEventListener("change", ()=>{
-          item.setLog[parseInt(cb.dataset.idx,10)].done = cb.checked;
+          const idx = parseInt(cb.dataset.idx,10);
+          item.setLog[idx].done = cb.checked;
+          /* Most sets repeat the one before them, so completing a set carries its
+             numbers into the next blank one — otherwise a second field would just
+             double the typing. Typing over it is all it takes to change. */
+          if(cb.checked) carryForward(item, idx);
           persistTray();
           if(cb.checked && item.restSeconds>0) startRestTimer(item);
           renderTray();
@@ -2093,7 +2136,7 @@
     if(!tray.length){ showToast("Nothing to copy yet"); return; }
     const labels = supersetLabels();
     const lines = tray.map(t=>{
-      const reps = t.setLog.map(s=> s.reps || "-").join(", ");
+      const reps = t.setLog.map(setLabel).join(", ");
       const ss = t.supersetId ? ` [Superset ${labels[t.supersetId]}]` : "";
       return `${t.n} (${t.eq}) — ${t.sets} sets: ${reps}${ss}`;
     });
@@ -2438,7 +2481,7 @@
       loggedAt: new Date().toISOString(),
       items: tray.map(t=>({
         id:t.id, n:t.n, cat:t.cat, eq:t.eq, sets:t.sets,
-        setLog: t.setLog.map(s=>({reps:s.reps, done:s.done}))
+        setLog: t.setLog.map(s=>({reps:s.reps, weight:s.weight, done:s.done}))
       }))
     };
     const existing = history.findIndex(h=>h.date===date);
@@ -2564,7 +2607,7 @@
             <span class="nm">${esc(i.n)}</span>
             <span class="badge">${esc(i.eq)}</span>
           </div>
-          <div class="setline">${i.setLog.map((s,n)=> `S${n+1} ${s.reps || "–"}${s.done ? "✓" : ""}`).join("   ")}</div>
+          <div class="setline">${i.setLog.map((s,n)=> `S${n+1} ${esc(setLabel(s))}${s.done ? "✓" : ""}`).join("   ")}</div>
         </div>`).join("")}
       <div class="form-actions">
         <button type="button" class="btn" id="reloadSess">Load into workout tray</button>
@@ -2576,7 +2619,7 @@
         if(tray.some(t=>t.id===i.id)) return;
         const ex = EX.find(e=>e.id===i.id) || {id:i.id, n:i.n, cat:i.cat, eq:i.eq};
         const item = makeTrayItem(ex, i.sets);
-        item.setLog = i.setLog.map(s=>({reps:s.reps, done:false}));
+        item.setLog = i.setLog.map(s=>({reps:s.reps, weight:s.weight || "", done:false}));
         tray.push(item);
       });
       persistTray(); renderTray(); renderGroups();
@@ -3034,12 +3077,21 @@
     if(!cats.length) return "Workout";
     return cats.map(c=>CAT_LABEL[c]).join(" + ") + (cats.length===1 ? " day" : "");
   }
+  function setLabel(s){
+    const w = String((s && s.weight) || "").trim();
+    const r = String((s && s.reps) || "").trim();
+    if(w && r) return w + unit() + " × " + r;
+    if(r) return r;
+    if(w) return w + unit();
+    return "–";
+  }
   function repsLine(setLog){
-    return setLog.map(s=> (s.reps && String(s.reps).trim()) ? s.reps : "–").join(", ");
+    return setLog.map(setLabel).join(", ");
   }
   function packItems(items){
     return items.map(i=>{
-      const o = { n:i.n, c:i.cat, e:i.eq, s:i.sets, r:i.setLog.map(x=>x.reps || "") };
+      const o = { n:i.n, c:i.cat, e:i.eq, s:i.sets,
+                  r:i.setLog.map(x=>x.reps || ""), w:i.setLog.map(x=>x.weight || "") };
       if(i.supersetId) o.ss = i.supersetId;
       return o;
     });
@@ -3050,8 +3102,17 @@
     return items.map(i=>{
       const idx = EX_INDEX.has(i.n) ? EX_INDEX.get(i.n) : -1;
       const ref = idx >= 0 ? idx.toString(36) : "?" + b64urlEncode(i.n);
-      const reps = i.setLog.map(s=> String(s.reps == null ? "" : s.reps).trim());
-      const body = reps.some(r=>r) ? ":" + reps.join("-") : "*" + i.sets;
+      /* "-" separates sets and "x" separates weight from reps, so neither may
+         appear inside a value. A set is "80x8", or plain "8" when only reps are
+         recorded — which keeps codes shared before weight existed readable. */
+      const clean = v => String(v == null ? "" : v).trim().replace(/[^0-9.]/g, "");
+      const cells = i.setLog.map(s=>{
+        const w = clean(s.weight), r = clean(s.reps);
+        if(w && r) return w + "x" + r;
+        if(w) return w + "x";
+        return r;
+      });
+      const body = cells.some(c=>c) ? ":" + cells.join("-") : "*" + i.sets;
       const ss = (ssLetters && i.supersetId && ssLetters[i.supersetId]) ? "+" + ssLetters[i.supersetId] : "";
       return ref + body + ss;
     }).join("!");
@@ -3095,16 +3156,19 @@
         base = { n: ex.n, c: ex.cat, e: ex.eq };
       }
 
-      let sets, reps;
+      let sets, reps, weights;
       if(mode === "*"){
         sets = Math.max(1, Math.min(20, parseInt(body,10) || 1));
         reps = Array.from({length:sets}, ()=>"");
+        weights = Array.from({length:sets}, ()=>"");
       } else {
-        reps = body.split("-");
-        sets = Math.max(1, Math.min(20, reps.length));
-        reps = reps.slice(0, sets);
+        const cells = body.split("-");
+        sets = Math.max(1, Math.min(20, cells.length));
+        const take = cells.slice(0, sets);
+        reps = take.map(c=> c.includes("x") ? c.split("x")[1] || "" : c);
+        weights = take.map(c=> c.includes("x") ? c.split("x")[0] || "" : "");
       }
-      const o = { n:base.n, c:base.c, e:base.e, s:sets, r:reps };
+      const o = { n:base.n, c:base.c, e:base.e, s:sets, r:reps, w:weights };
       if(ss) o.ss = "ss-" + ss;
       return o;
     });
@@ -3314,7 +3378,7 @@
     const text = String(raw || "").trim();
     if(!text) return { ok:false, msg:"Nothing to read — paste a message or choose a file." };
 
-    const compact = text.match(/PTP2~[A-Za-z0-9~!*:+_=;?-]+/);
+    const compact = text.match(/PTP2~[A-Za-z0-9~!*:+_=;?.-]+/);
     if(compact){
       try{ return { ok:true, data: decodeCompact(compact[0]) }; }
       catch(e){
@@ -3356,7 +3420,9 @@
       const match = EX.find(e=> e.n === i.n);
       const sets = Math.max(1, Math.min(20, parseInt(i.s,10) || (i.r ? i.r.length : 3) || 3));
       const reps = Array.isArray(i.r) ? i.r : [];
-      const setLog = Array.from({length:sets}, (_,k)=>({ reps: reps[k] || "", done:false }));
+      const weights = Array.isArray(i.w) ? i.w : [];
+      const setLog = Array.from({length:sets}, (_,k)=>({
+        reps: reps[k] || "", weight: weights[k] || "", done:false }));
       return {
         id: match ? match.id : ("imported-" + n + "-" + i.n.toLowerCase().replace(/[^a-z0-9]+/g,"-")),
         n: i.n,
@@ -3374,7 +3440,7 @@
       if(tray.some(t=>t.id === i.id)) return;
       tray.push({
         id:i.id, n:i.n, cat:i.cat, eq:i.eq, sets:i.sets,
-        setLog: i.setLog.map(s=>({reps:s.reps, done:false})),
+        setLog: i.setLog.map(s=>({reps:s.reps, weight:s.weight || "", done:false})),
         expanded:false,
         restSeconds: parseInt(settings.defaultRest,10) || 0,
         supersetId: i.supersetId || null
