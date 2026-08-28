@@ -361,6 +361,23 @@
   }
   .all-pill.active{ color: var(--text); border-color: var(--text-faint); }
 
+  /* ---- muscle-group chips: narrow a category to one group ---- */
+  .subgroups{
+    display:flex; gap:7px; margin-bottom:16px; overflow-x:auto; padding-bottom:2px;
+    scrollbar-width:none; -ms-overflow-style:none;
+  }
+  .subgroups::-webkit-scrollbar{ display:none; }
+  .sg-chip{
+    flex:none; display:inline-flex; align-items:center; gap:7px; cursor:pointer;
+    background: var(--surface); border:1px solid var(--border); border-radius:999px;
+    padding:7px 14px; font-size:12.5px; color: var(--text-dim); font-family:inherit;
+    white-space:nowrap;
+  }
+  .sg-chip:hover{ border-color: var(--cat-color); color: var(--text); }
+  .sg-chip .sg-n{ font-family:'JetBrains Mono',monospace; font-size:10.5px; color: var(--text-faint); }
+  .sg-chip.on{ background: var(--cat-color); border-color: var(--cat-color); color: var(--cat-ink); font-weight:600; }
+  .sg-chip.on .sg-n{ color: var(--cat-ink); opacity:.75; }
+
   .toolbar{ display:flex; gap:10px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
   .search{
     flex:1; min-width:180px; background: var(--surface); border:1px solid var(--border);
@@ -878,6 +895,7 @@
 
         <div class="all-pill active" id="allPill">All categories</div>
         <div class="tiles" id="tiles"></div>
+        <div class="subgroups" id="subgroups" hidden></div>
 
         <div class="toolbar">
           <input class="search" id="search" type="text" placeholder="Search exercises… (e.g. curl, squat, cable)">
@@ -1271,11 +1289,11 @@
     {n:"T-Bar Row", cat:"pull", g:"Back", eq:"Machine", url:"https://exrx.net/Lists/ExList/BackWt"},
 
     // ---- PULL: Traps & Rear Delts ----
-    {n:"Trap Bar Shrug", cat:"pull", g:"Traps &amp; Rear Delts", eq:"Barbell", url:"https://exrx.net/WeightExercises/TrapeziusUpper/TBShrug"},
-    {n:"Dumbbell Shrug", cat:"pull", g:"Traps &amp; Rear Delts", eq:"Dumbbell", url:"https://exrx.net/Lists/ExList/BackWt"},
-    {n:"Barbell Upright Row", cat:"pull", g:"Traps &amp; Rear Delts", eq:"Barbell", url:"https://exrx.net/Lists/ExList/BackWt"},
-    {n:"Cable Face Pull", cat:"pull", g:"Traps &amp; Rear Delts", eq:"Cable", url:"https://exrx.net/Lists/ExList/ShouldWt"},
-    {n:"Dumbbell Reverse Fly", cat:"pull", g:"Traps &amp; Rear Delts", eq:"Dumbbell", url:"https://exrx.net/Lists/ExList/ShouldWt"},
+    {n:"Trap Bar Shrug", cat:"pull", g:"Traps & Rear Delts", eq:"Barbell", url:"https://exrx.net/WeightExercises/TrapeziusUpper/TBShrug"},
+    {n:"Dumbbell Shrug", cat:"pull", g:"Traps & Rear Delts", eq:"Dumbbell", url:"https://exrx.net/Lists/ExList/BackWt"},
+    {n:"Barbell Upright Row", cat:"pull", g:"Traps & Rear Delts", eq:"Barbell", url:"https://exrx.net/Lists/ExList/BackWt"},
+    {n:"Cable Face Pull", cat:"pull", g:"Traps & Rear Delts", eq:"Cable", url:"https://exrx.net/Lists/ExList/ShouldWt"},
+    {n:"Dumbbell Reverse Fly", cat:"pull", g:"Traps & Rear Delts", eq:"Dumbbell", url:"https://exrx.net/Lists/ExList/ShouldWt"},
 
     // ---- PULL: Biceps ----
     {n:"Barbell Curl", cat:"pull", g:"Biceps", eq:"Barbell", url:"https://exrx.net/Lists/ExList/ArmWt"},
@@ -1587,6 +1605,7 @@
   if(!Array.isArray(lifts)) lifts = JSON.parse(JSON.stringify(DEFAULT_LIFTS));
 
   let activeCat = null;
+  let activeGroup = null;   // a muscle group within the active category, or all of them
   let query = "";
   let equip = "";
   let tray = [];
@@ -1778,16 +1797,46 @@
       tile.innerHTML = `<span class="ring"></span><span class="label">${CAT_LABEL[cat]}</span><span class="sub">${CAT_SUB[cat]} · ${count}</span>`;
       tile.addEventListener("click", ()=>{
         activeCat = (activeCat === cat) ? null : cat;
+        activeGroup = null;            // a new category starts on all of its groups
         allPill.classList.toggle("active", activeCat===null);
-        renderTiles(); renderGroups();
+        renderTiles(); renderSubgroups(); renderGroups();
       });
       tilesEl.appendChild(tile);
     });
   }
   allPill.addEventListener("click", ()=>{
-    activeCat = null; allPill.classList.add("active");
-    renderTiles(); renderGroups();
+    activeCat = null; activeGroup = null; allPill.classList.add("active");
+    renderTiles(); renderSubgroups(); renderGroups();
   });
+
+  /* Pick a category and you get all of its muscle groups, as before. The chips
+     let you narrow to one — triceps without the chest and shoulders. */
+  const subgroupsEl = document.getElementById("subgroups");
+  function renderSubgroups(){
+    if(!activeCat){ subgroupsEl.hidden = true; subgroupsEl.innerHTML = ""; return; }
+    const inCat = EX.filter(e=>e.cat===activeCat);
+    const groups = [...new Set(inCat.map(e=>e.g))];
+    if(groups.length < 2){ subgroupsEl.hidden = true; subgroupsEl.innerHTML = ""; return; }
+
+    subgroupsEl.hidden = false;
+    subgroupsEl.style.setProperty("--cat-color", `var(--${activeCat})`);
+    subgroupsEl.style.setProperty("--cat-ink", `var(--on-${activeCat})`);
+    subgroupsEl.innerHTML =
+      `<button type="button" class="sg-chip${activeGroup===null?" on":""}" data-g="">`
+      + `All ${CAT_LABEL[activeCat]}<span class="sg-n">${inCat.length}</span></button>`
+      + groups.map(g=>{
+          const n = inCat.filter(e=>e.g===g).length;
+          return `<button type="button" class="sg-chip${activeGroup===g?" on":""}" data-g="${esc(g)}">`
+               + `${esc(g)}<span class="sg-n">${n}</span></button>`;
+        }).join("");
+
+    subgroupsEl.querySelectorAll(".sg-chip").forEach(chip=>{
+      chip.addEventListener("click", ()=>{
+        activeGroup = chip.dataset.g || null;
+        renderSubgroups(); renderGroups();
+      });
+    });
+  }
 
   const equipSel = document.getElementById("equipFilter");
   equipSel.addEventListener("change", ()=>{ equip = equipSel.value; renderGroups(); });
@@ -1803,7 +1852,9 @@
 
     cats.forEach(cat=>{
       const inCat = EX.filter(e=>e.cat===cat);
-      [...new Set(inCat.map(e=>e.g))].forEach(sg=>{
+      let groups = [...new Set(inCat.map(e=>e.g))];
+      if(activeGroup) groups = groups.filter(g=> g === activeGroup);
+      groups.forEach(sg=>{
         let items = inCat.filter(e=>e.g===sg);
         if(equip) items = items.filter(e=>e.eq===equip);
         if(query) items = items.filter(e=>e.n.toLowerCase().includes(query));
@@ -1814,7 +1865,7 @@
         group.className = "group";
         group.style.setProperty("--group-color", `var(--${cat})`);
         group.style.setProperty("--group-ink", `var(--on-${cat})`);
-        group.innerHTML = `<div class="group-head"><h3>${CAT_LABEL[cat]} — ${sg}</h3><span class="n">${items.length}</span></div>`;
+        group.innerHTML = `<div class="group-head"><h3>${CAT_LABEL[cat]} — ${esc(sg)}</h3><span class="n">${items.length}</span></div>`;
 
         const wrap = document.createElement("div");
         wrap.className = "cards";
@@ -1907,7 +1958,7 @@
     openNewEx(false);
     activeCat = cat; allPill.classList.remove("active");
     query = ""; document.getElementById("search").value = "";
-    renderTiles(); renderGroups(); populateLiftPicker();
+    renderTiles(); renderSubgroups(); renderGroups(); populateLiftPicker();
     showToast(`${name} added to ${CAT_LABEL[cat]}`);
   });
 
@@ -1931,7 +1982,8 @@
       persistTray(); renderTray();
     }
     refreshExerciseLists();
-    renderTiles(); renderGroups(); populateLiftPicker();
+    activeGroup = null;
+    renderTiles(); renderSubgroups(); renderGroups(); populateLiftPicker();
     showToast(`${ex.n} deleted`);
   }
 
@@ -3790,6 +3842,7 @@
   refreshExerciseLists();
   setTrainMode(tray.length ? "workout" : "browse");
   renderTiles();
+  renderSubgroups();
   renderGroups();
   renderTray();
   renderSplitLoader();
