@@ -431,6 +431,46 @@
   .set-rows{ margin-top:10px; padding-top:9px; border-top:1px dashed var(--border-soft); display:flex; flex-direction:column; gap:6px; }
   .set-row{ display:flex; align-items:center; gap:8px; }
   .set-row .set-num{ font-size:11px; color: var(--text-faint); font-family:'JetBrains Mono',monospace; width:42px; flex:none; }
+  /* ---- Train modes: browsing and logging are different jobs, so on a phone
+     they get different screens rather than one long scroll. Desktop shows the
+     tray as a permanent column, where the switch would be pointless. ---- */
+  .mode-switch{ display:none; gap:3px; background: var(--surface-2); border:1px solid var(--border);
+    border-radius:10px; padding:3px; margin-bottom:16px; }
+  .mode-switch button{
+    flex:1; background:none; border:none; border-radius:7px; padding:9px 6px; cursor:pointer;
+    font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.05em;
+    font-size:12px; color: var(--text-dim); display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .mode-switch button.on{ background: var(--surface-3); color: var(--text); }
+  .ms-count{ font-family:'JetBrains Mono',monospace; font-size:11px; background: var(--text);
+    color: var(--bg); border-radius:999px; padding:1px 7px; letter-spacing:0; }
+  .mode-switch button:not(.on) .ms-count{ background: var(--border); color: var(--text-dim); }
+  .ms-count[data-empty="1"]{ display:none; }
+  @media (max-width: 920px){
+    .mode-switch{ display:flex; }
+    #view-train[data-mode="workout"] #browsePane{ display:none; }
+    /* the tray is not a descendant of the view, so JS flags the grid instead */
+    .layout.browse-mode #trayPanel{ display:none !important; }
+  }
+  .tray-empty p{ margin:0 0 12px; }
+
+  /* ---- session header ---- */
+  .sess-head{ margin-bottom:12px; }
+  .sess-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  .sess-head h2{ font-size:15px; }
+  .sess-head .sub{ font-size:11.5px; color: var(--text-dim); margin:4px 0 0; }
+  .tray-back{ flex:none; background: var(--surface-2); border:1px solid var(--border); color: var(--text-dim);
+    border-radius:8px; padding:6px 11px; font-size:12px; cursor:pointer; font-family:inherit; }
+  .tray-back:hover{ color: var(--text); border-color: var(--text-faint); }
+  .sess-bar{ height:4px; border-radius:2px; background: var(--surface-3); margin-top:11px; overflow:hidden; }
+  .sess-bar i{ display:block; height:100%; width:0; background: var(--text); border-radius:2px;
+    transition: width .25s ease; }
+
+  /* ---- last time ---- */
+  .last-time{ font-size:10.5px; color: var(--text-faint); font-family:'JetBrains Mono',monospace;
+    margin-top:5px; line-height:1.35; }
+  .last-time b{ color: var(--text-dim); font-weight:500; }
+
   .set-head{ display:flex; align-items:center; gap:8px; padding-bottom:1px; }
   .set-head .col-lbl{ flex:1; min-width:0; font-size:8.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); }
   .set-head .col-spacer{ width:20px; flex:none; }
@@ -818,7 +858,13 @@
   <div class="layout" id="layout">
     <div>
       <!-- ============ TRAIN ============ -->
-      <section class="view active" id="view-train">
+      <section class="view active" id="view-train" data-mode="browse">
+        <div class="mode-switch" id="modeSwitch" role="group" aria-label="Train mode">
+          <button type="button" data-mode="workout">Workout <span class="ms-count" id="msCount">0</span></button>
+          <button type="button" data-mode="browse" class="on">Browse</button>
+        </div>
+
+        <div id="browsePane">
         <div class="splits">
           <div class="splits-head">
             <div>
@@ -880,6 +926,7 @@
         </div>
 
         <div id="groups"></div>
+        </div>
       </section>
 
       <!-- ============ SPLITS ============ -->
@@ -1123,11 +1170,21 @@
 
     <!-- ============ TRAY (Train view only) ============ -->
     <aside class="tray" id="trayPanel">
-      <button type="button" class="tray-back" id="trayBack">↑ Back to exercises</button>
-      <h2>Your Workout</h2>
-      <p class="sub">Tap + to log weight and reps per set — saved automatically in this browser</p>
+      <div class="sess-head" id="sessHead">
+        <div class="sess-top">
+          <div>
+            <h2 id="sessTitle">Your Workout</h2>
+            <p class="sub" id="sessSub">Nothing added yet</p>
+          </div>
+          <button type="button" class="tray-back" id="trayBack">+ Add</button>
+        </div>
+        <div class="sess-bar" id="sessBar" hidden><i></i></div>
+      </div>
       <div class="tray-list" id="trayList"></div>
-      <div class="tray-empty" id="trayEmpty">Add exercises from the list, or load a split day above.</div>
+      <div class="tray-empty" id="trayEmpty">
+        <p>No exercises yet.</p>
+        <button type="button" class="btn" id="emptyBrowse">Browse exercises</button>
+      </div>
       <div class="tray-actions">
         <button class="log" id="logBtn">Log session to today</button>
         <div class="row2">
@@ -1895,6 +1952,24 @@
   function clearItemTimer(id){
     if(timers[id]){ clearInterval(timers[id].intervalId); delete timers[id]; }
   }
+  /* ================= Last time =================
+     Progressive overload needs one number you can't get anywhere else: what you
+     did last session. History already holds it — this surfaces it where you log. */
+  function lastTimeFor(exId, exName){
+    for(const h of history){                       // history is newest-first
+      const hit = h.items.find(i=> i.id === exId || i.n === exName);
+      if(!hit) continue;
+      const sets = hit.setLog.filter(s=> s.reps || s.weight);
+      if(!sets.length) continue;
+      return { date: h.date, sets };
+    }
+    return null;
+  }
+  function lastTimeLine(lt){
+    if(!lt) return "";
+    return `<div class="last-time"><b>Last ${esc(shortDate(lt.date))}</b> · ${esc(lt.sets.map(setLabel).join(", "))}</div>`;
+  }
+
   /* Copy a completed set's numbers into the next set that has none. */
   function carryForward(item, fromIdx){
     const src = item.setLog[fromIdx];
@@ -1959,6 +2034,7 @@
 
   function renderTray(){
     trayCountEl.textContent = tray.length;
+    renderSessionHeader();
     syncTrayFab();
     trayListEl.innerHTML = "";
     trayEmptyEl.style.display = tray.length ? "none" : "block";
@@ -1971,6 +2047,7 @@
       row.style.setProperty("--item-ink", `var(--on-${item.cat})`);
 
       const allDone = item.setLog.length>0 && item.setLog.every(s=>s.done);
+      const lt = lastTimeFor(item.id, item.n);
       const ts = timers[item.id];
       let timerBadge = "";
       if(ts){
@@ -1992,9 +2069,11 @@
             <div class="set-row${s.done ? " done" : ""}">
               <span class="set-num">Set ${si+1}</span>
               <input type="text" size="4" class="set-input weight-input" inputmode="decimal" data-idx="${si}"
-                     placeholder="—" value="${esc(s.weight || "")}" aria-label="Set ${si+1} weight in ${unit()}">
+                     placeholder="${esc((lt && lt.sets[si] && lt.sets[si].weight) || "—")}"
+                     value="${esc(s.weight || "")}" aria-label="Set ${si+1} weight in ${unit()}">
               <input type="text" size="4" class="set-input reps-input" inputmode="numeric" data-idx="${si}"
-                     placeholder="—" value="${esc(s.reps)}" aria-label="Set ${si+1} reps">
+                     placeholder="${esc((lt && lt.sets[si] && lt.sets[si].reps) || "—")}"
+                     value="${esc(s.reps)}" aria-label="Set ${si+1} reps">
               <label class="check-wrap">
                 <input type="checkbox" data-idx="${si}" ${s.done ? "checked" : ""}>
                 <span class="checkmark" aria-hidden="true"></span>
@@ -2035,6 +2114,7 @@
           <div class="head-left">
             <div class="ex-name">${allDone ? "✓ " : ""}${esc(item.n)}</div>
             <div class="head-meta"><span class="badge">${esc(item.eq)}</span>${ssBadge}${timerBadge}</div>
+            ${lastTimeLine(lt)}
           </div>
           <div class="head-right">
             <label class="sets-field">Sets<input type="number" min="1" max="20" class="sets-input" value="${item.sets}"></label>
@@ -2146,6 +2226,49 @@
     }catch(e){ showToast("Could not copy — select & copy manually"); }
   });
 
+  /* ================= Train mode (phone only) =================
+     Browsing the directory and logging a session are different jobs at different
+     moments. On a phone they get separate screens; on desktop the tray is a
+     permanent column and the switch is hidden, so the mode is ignored there. */
+  let trainMode = "browse";
+  const trainView = document.getElementById("view-train");
+
+  function setTrainMode(mode){
+    trainMode = (mode === "workout") ? "workout" : "browse";
+    trainView.setAttribute("data-mode", trainMode);
+    document.getElementById("layout").classList.toggle("browse-mode", trainMode === "browse");
+    document.querySelectorAll("#modeSwitch button").forEach(b=>
+      b.classList.toggle("on", b.dataset.mode === trainMode));
+    syncTrayFab();
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+  document.querySelectorAll("#modeSwitch button").forEach(btn=>{
+    btn.addEventListener("click", ()=> setTrainMode(btn.dataset.mode));
+  });
+
+  function renderSessionHeader(){
+    const msCount = document.getElementById("msCount");
+    msCount.textContent = tray.length;
+    msCount.dataset.empty = tray.length ? "0" : "1";
+
+    const title = document.getElementById("sessTitle");
+    const sub   = document.getElementById("sessSub");
+    const bar   = document.getElementById("sessBar");
+
+    if(!tray.length){
+      title.textContent = "Your Workout";
+      sub.textContent = "Nothing added yet";
+      bar.hidden = true;
+      return;
+    }
+    const total = tray.reduce((a,t)=> a + t.setLog.length, 0);
+    const done  = tray.reduce((a,t)=> a + t.setLog.filter(s=>s.done).length, 0);
+    title.textContent = dayTitle(tray);
+    sub.textContent = `${tray.length} exercise${tray.length>1?"s":""} · ${done}/${total} sets done`;
+    bar.hidden = false;
+    bar.querySelector("i").style.width = total ? (done/total*100).toFixed(1) + "%" : "0%";
+  }
+
   /* ================= Splits ================= */
   function splitDef(key){ return allSplits().find(s=>s.key===key) || SPLITS[0]; }
   /* Built-in splits keep their template in code and store edits as an override, so
@@ -2227,6 +2350,7 @@
       added++;
     });
     persistTray(); renderTray(); renderGroups();
+    if(added) setTrainMode("workout");
     showToast(added ? `${day.name} loaded — ${added} exercise${added>1?"s":""} added` : "Those exercises are already in your tray");
   }
   document.getElementById("changeSplitBtn").addEventListener("click", ()=> setView("splits"));
@@ -3449,6 +3573,8 @@
     });
     persistTray(); renderTray(); renderGroups();
     setView("train");
+    /* an imported or reloaded session should land on the workout, not the directory */
+    setTrainMode("workout");
     showToast(added ? `${label} loaded — ${added} exercise${added>1?"s":""} added` : "Those exercises are already in your tray");
   }
 
@@ -3556,7 +3682,9 @@
   const topFab   = document.getElementById("topFab");
 
   function syncTrayFab(){
-    trayFab.classList.toggle("show", currentView === "train" && tray.length > 0);
+    /* In workout mode the tray is already the screen, so the jump pill is noise. */
+    const show = currentView === "train" && tray.length > 0 && trainMode === "browse";
+    trayFab.classList.toggle("show", show);
     fabCount.textContent = tray.length;
     syncTopFab();
   }
@@ -3571,12 +3699,9 @@
   topFab.addEventListener("click", ()=>{
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
-  trayFab.addEventListener("click", ()=>{
-    document.getElementById("trayPanel").scrollIntoView({ behavior:"smooth", block:"start" });
-  });
-  document.getElementById("trayBack").addEventListener("click", ()=>{
-    document.getElementById("groups").scrollIntoView({ behavior:"smooth", block:"start" });
-  });
+  trayFab.addEventListener("click", ()=> setTrainMode("workout"));
+  document.getElementById("trayBack").addEventListener("click", ()=> setTrainMode("browse"));
+  document.getElementById("emptyBrowse").addEventListener("click", ()=> setTrainMode("browse"));
 
   /* ================= Install as an app =================
      Chrome/Edge/Android fire beforeinstallprompt and let us trigger the real
@@ -3663,6 +3788,7 @@
   /* ================= Init ================= */
   renderIdentity();
   refreshExerciseLists();
+  setTrainMode(tray.length ? "workout" : "browse");
   renderTiles();
   renderGroups();
   renderTray();
