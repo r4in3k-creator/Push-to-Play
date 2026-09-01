@@ -2,7 +2,7 @@
    Goal: the app opens instantly and works with no signal (a gym basement is the
    normal case), while still picking up new versions when there is a connection. */
 
-const VERSION = 'ptp-v5';
+const VERSION = 'ptp-v7';
 const SHELL = [
   './',
   './index.html',

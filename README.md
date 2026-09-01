@@ -1,133 +1,180 @@
 # Push to Play
 
-A workout app in a single self-contained HTML file. No build step, no server, no sign-in —
-open `index.html` in a browser and it works. Everything you enter is stored in that
-browser's local storage on that device.
+A workout tracker that runs entirely in the browser. One HTML file, no build
+step, no server, no sign-in. Open it, and it works — including offline, once
+it has been installed.
 
-Exercises are categorised **Push / Pull / Legs / Abs**, sourced from the
-[ExRx.net exercise directory](https://exrx.net/Lists/Directory) and its
-[3-day Push/Pull/Legs template](https://exrx.net/Workouts/Workout3PPL).
-Not affiliated with ExRx.net.
+Live: https://r4in3k-creator.github.io/Push-to-Play/
 
-## Running it
+---
 
-Open the file. That's it.
+## What it does
 
-```
-open index.html
-```
+**Browse** — 92 exercises from the [ExRx directory](https://exrx.net/Lists/Directory),
+sorted into Push (27), Pull (24), Legs (24) and Abs (17). Tap a category to see
+its muscle groups; tap a muscle-group chip to narrow to one — triceps without
+the chest and shoulders. Search and an equipment filter compose on top of both.
+Anything the directory doesn't cover, you add yourself under **+ New exercise**;
+your own exercises sit alongside the built-ins everywhere.
 
-It is deliberately dependency-free: all CSS and JavaScript are inline, and the only external
-request is a Google Fonts stylesheet. It works offline apart from the fonts falling back.
+**Workout** — add exercises to the tray, set how many sets, and expand a card
+into one row per set with a weight field, a reps field and a completion
+checkbox. Each row shows what you did last time as its placeholder, so you are
+never guessing. Filling in a set carries the same numbers forward to the next
+one. The ellipsis menu handles supersets and rest timers, per exercise.
 
-## What's in it
+**Splits** — eleven templates, each editable: swap an exercise, add a day, add
+your own. One tap loads a day into the tray.
 
-| Tab | What it does |
-| --- | --- |
-| **Train** | The exercise directory with search and equipment filtering, plus the workout tray. Add your own exercises here. |
-| **Splits** | 11 programme templates (PPL, PPLUL, Upper/Lower, Full Body, PHUL, Arnold, Bro Split, Batman, Smolov Jr, GVT, StrongLifts 5×5). Swap, add and remove exercises; rename, add and delete days; or build a split from scratch. |
-| **Calendar** | Every logged session, with category dots per day, monthly stats and a current streak. Reload any past session back into the tray. |
-| **Records** | Personal records per lift with an Epley estimated 1RM, a progression chart and full entry history. Bench, deadlift and squat by default. |
-| **Account** | A local profile — name, bodyweight, goal, experience. No password, no server. |
-| **Settings** | Units, week start, default sets and rest, theme, plus Share and Import. |
+| Split | Days | Goal |
+|---|---|---|
+| Push / Pull / Legs | 3–6 | Hypertrophy |
+| PPLUL | 5 | Size + strength |
+| Upper / Lower | 4 | Balanced |
+| Full Body | 3 | General fitness |
+| PHUL | 4 | Power + size |
+| Arnold Split | 6 | Mass |
+| Bro Split | 5 | Mass |
+| Batman | 4 | Athletic strength |
+| Smolov Jr | 4 (3 weeks) | Peak one lift |
+| German Volume Training | 5 | Hypertrophy |
+| StrongLifts 5×5 | 3 | Strength |
 
-### The workout tray
+**Calendar** — every finished session lands on a day, dotted by the categories
+you trained. Pick a day to see exactly what you did.
 
-Each exercise sits collapsed showing its name, equipment and set count. `+` expands it into
-one row per set with a reps field and a completion checkbox. `⋯` opens per-exercise options:
-link it into a superset with another exercise, or set a rest timer that starts counting down
-when you tick a set off.
+**Records** — estimated one-rep max per lift, on the Epley formula
+(`weight × (1 + reps / 30)`), charted over time. Bench press, deadlift and
+squat are there by default; swap in anything from the directory.
 
-### Sharing
+**Share** — Settings → Share turns a workout, or every session in a date range,
+into a short text code you can paste into WhatsApp or a text message. Whoever
+receives it pastes it back into their own copy and the workouts load, sets and
+all. No account, no upload, nothing to sign up for.
 
-A share is one block of plain text — a readable plan for the person reading it, plus a short
-import code on the last line so their copy of the app can load it without retyping:
+---
 
-```
-Push to Play — Push day
-Raine · 2 exercises, 7 sets
+## Where the data lives
 
-1) Barbell Bench Press · Barbell
-   4 sets: 12, 10, 8, 6
-...
+In your browser's `localStorage`, under this site's origin. Nothing is sent
+anywhere — there is no server to send it to. That has two consequences worth
+knowing:
 
-PTP2~W~UmFpbmU~0:12-10-8-6+A!k*3+A
-```
+- Clearing site data for this origin erases your history.
+- Your phone and your laptop keep separate copies. The share code is how you
+  move a workout between them.
 
-The code addresses built-in exercises by their index in the catalogue, which is what keeps it
-short. Exercises you added yourself have no shared index, so those travel by name instead and
-still import correctly for someone who has never seen them.
+Keys are all prefixed `ptp-`: `ptp-tray`, `ptp-history`, `ptp-prs`,
+`ptp-splits`, `ptp-profile`, `ptp-settings`, `ptp-theme`, `ptp-active-split`,
+`ptp-custom-ex`, `ptp-custom-splits`.
 
-Paste a whole message into **Settings → Import** — the code is found automatically. A shared
-training log lists each day with a "Do this one" button so someone can work through your
-programme session by session.
+---
 
-## Repository layout
+## Installing it as an app
 
-```
-index.html                 the entire application
-manifest.webmanifest       PWA metadata (name, icons, standalone display)
-sw.js                      service worker — offline caching
-icons/                     app icons, including maskable variants
-docs/palette-study.html    live comparison of the colour directions considered
-```
+Open the live URL, then:
 
-## Putting it on the web
+- **Android / Chrome** — the install prompt appears in the app itself, or use
+  ⋮ → *Install app*.
+- **iOS / Safari** — Share → *Add to Home Screen*. (Safari has no install
+  prompt; the app detects iOS and says so.)
 
-The app is a **progressive web app**: served over HTTPS it can be installed to a
-phone home screen or a desktop dock and then runs full screen and offline. Any
-static host works — it is four files and a folder of icons, no build step.
+Installed, it opens full-screen with no browser chrome and loads offline.
 
-### GitHub Pages
+---
 
-```bash
-git remote add origin https://github.com/<username>/push-to-play.git
-git push -u origin main
-```
+## The files
 
-Then in the repo: **Settings → Pages → Source: Deploy from a branch → `main` / `root`**.
-A minute later it is live at `https://<username>.github.io/push-to-play/`.
+| File | What it is |
+|---|---|
+| `index.html` | The whole app — markup, styles and script in one file |
+| `manifest.webmanifest` | Name, icons, colours, standalone display |
+| `sw.js` | Service worker: network-first for the page, cache-first for assets |
+| `icons/` | 192/512 icons, maskable variants, apple-touch-icon |
 
-Paths in the manifest and service worker are relative, so it works from a
-subdirectory like that without changes.
+Paths in the manifest and service worker are relative (`./`), so the app works
+from a GitHub project page as happily as from a domain root.
 
-### Installing it
-
-- **Android / Chrome / Edge** — open the site, then use the install button under
-  Settings, or the browser's own "Install app" prompt.
-- **iPhone / Safari** — Share → Add to Home Screen. Settings shows the steps.
-- **Desktop Chrome / Edge** — an install icon appears in the address bar.
-
-Once installed it opens without browser chrome and works with no signal, which is
-the point in a gym basement.
-
-### Updating it
-
-Push to `main`. The service worker fetches the page from the network first when
-there is a connection, so the next launch picks up the new version; the cached
-copy is only used when offline. Bump `VERSION` in `sw.js` when you change the
-cached file list.
-
-### Your data
-
-Everything lives in the browser's local storage, keyed to the site's origin — it
-never leaves the device and there is no account. That means data does **not**
-follow you between browsers or devices; use **Settings → Export my data** for a
-backup, and Share to move a workout to someone else. Clearing site data clears the
-history, so export before you do that.
+---
 
 ## Notes for future edits
 
-A few decisions in the source are load-bearing and easy to break:
+Things that look like details and are not:
 
-- **Only ever append to the built-in `EX` array.** Share codes address built-ins by array
-  index, so inserting or reordering an entry silently changes what every existing code means.
-  `BUILTIN_EX_COUNT` marks the boundary; anything past it is a user-added exercise and is
-  encoded by name.
-- **Validate category colours across every pair, not just neighbours.** A calendar day can
-  show any two dots side by side. An earlier palette passed an adjacent-only check at ΔE 12.8
-  while push and legs were actually 2.7 apart under red-green colourblindness — indistinguishable.
-- **Filled accent controls use their own ink token** (`--on-push` and friends), not the page
-  background, because a single ink colour does not clear 4.5:1 contrast on all four accents.
-- **The per-exercise `⋯` panel sits in normal flow**, not absolutely positioned. As a floating
-  popover it covered the expanded set rows underneath it.
+1. **`BUILTIN_EX_COUNT` is a boundary, not a statistic.** Share codes address
+   built-in exercises by their index in `EX`. Anything past that index is a
+   user's own exercise and travels by name instead. `mountCustomEx()` truncates
+   to that count before re-appending, so indices can never shift. Adding a new
+   built-in exercise anywhere but the end of its category's block will
+   invalidate every share code already in the wild.
+
+2. **The phone stylesheet must stay last.** Nearly every rule in the
+   `@media (max-width: 560px)` block narrows a rule declared further up the
+   file, and at equal specificity the later rule wins. A breakpoint written
+   above the rule it means to override loses silently — that has bitten this
+   file twice (the bottom tab bar's footer clearance, and the mobile `.tiles`
+   gap).
+
+3. **`[hidden]` needs `!important` here.** An author `display` rule outranks
+   the user-agent `[hidden]` rule, so several flex containers ignored the
+   attribute until `[hidden]{ display: none !important; }` was added near the
+   top.
+
+4. **`.layout > * { min-width: 0 }` is load-bearing.** A grid track's automatic
+   minimum is `min-content`, and a text input's `min-content` is its default
+   character width. Two of them per set row pushed the tray 144px off a 390px
+   screen before that guard existed.
+
+5. **The `⋯` menu is in the flow, deliberately.** It was an absolutely
+   positioned popover and covered the expanded set rows underneath it. Do not
+   put it back.
+
+6. **Colours are separated by lightness, not hue.** The four category colours
+   (`#c04529` push, `#2c6bb0` pull, `#94670c` legs, `#00846f` abs) were checked
+   for every pair under protanopia, deuteranopia and tritanopia — not just
+   adjacent pairs, which is what let an earlier palette ship with push-red and
+   legs-gold at ΔE 2.7 under deuteranopia. Each accent also carries its own
+   `--on-*` ink token so text on a filled control clears 4.5:1.
+
+7. **Inputs are 16px on phones.** Anything smaller makes Safari zoom the page
+   on focus, which on the workout screen means every reps and weight box.
+
+8. **Safe-area insets go through `--sa-t/-r/-b/-l`, not raw `env()`.**
+   `env()` cannot be set from script, so raw calls are untestable. The four
+   variables on `:root` default to the `env()` values and let a test inject a
+   real iPhone's insets. The rules that consume them live in the *last* block
+   of the stylesheet, because the phone block above sets `header{ padding: ... }`
+   as a shorthand — which is exactly how the landscape inset got wiped once.
+
+9. **The iOS status bar is `default`, deliberately.** `black-translucent` hands
+   the strip under the status bar and Dynamic Island to the page and forces
+   white status text, which is unreadable over the light theme. With `default`,
+   iOS reserves and paints that strip itself and picks its own contrast. The
+   top inset is therefore 0 in portrait; the `max()` in the header padding
+   means the layout is still correct if that ever changes. The side insets do
+   real work in landscape, where the island and the rounded corners are on the
+   left and right.
+
+10. **Bump `VERSION` in `sw.js` on every change.** Installed copies serve from
+    the old cache until the version string changes.
+
+### The share format
+
+```
+PTP2~W~<name>~<item>!<item>…                 one workout
+PTP2~L~<name>~<YYYYMMDD>~<off>=<items>;…     a training log
+
+item = <ref><mode><body>[+<letter>]
+  ref   base36 index into the built-in catalogue, or "?" + base64url(name)
+  mode  "*" = a plain set count
+        ":" = "-"-joined sets, each "80x8" (weight × reps) or a bare rep count
+  +A    superset group, if any
+```
+
+The importer also still reads the older `PTP1` base64 format, so codes shared
+before the compact encoding landed keep working.
+
+---
+
+Exercise names and categories follow [ExRx.net](https://exrx.net/Lists/Directory).
+Each card links back to the directory.

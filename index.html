@@ -5,7 +5,12 @@
 <meta name="theme-color" content="#eceeef" media="(prefers-color-scheme: light)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- "default", not "black-translucent": translucent hands us the strip under the
+     status bar and Dynamic Island to paint ourselves, and forces white status text,
+     which is unreadable over this app's light theme. "default" lets iOS own that
+     strip and pick its own contrast. The safe-area insets below still run, because
+     landscape puts the island and the rounded corners on the sides regardless. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Push to Play">
 <meta name="description" content="Push / Pull / Legs / Abs workout tracker — split templates, set-by-set logging, training calendar and personal records.">
 <link rel="manifest" href="manifest.webmanifest">
@@ -18,6 +23,15 @@
      four stay distinguishable for colorblind readers: validated for lightness band, chroma
      floor, adjacent CVD separation, normal-vision separation and surface contrast. */
   :root{
+    /* Notch, Dynamic Island, rounded corners and home indicator, as four
+       variables rather than raw env() calls. Same values, but a test can
+       override them — env() itself cannot be set from script, so without this
+       indirection none of the inset handling below is verifiable. */
+    --sa-t: env(safe-area-inset-top, 0px);
+    --sa-r: env(safe-area-inset-right, 0px);
+    --sa-b: env(safe-area-inset-bottom, 0px);
+    --sa-l: env(safe-area-inset-left, 0px);
+
     --bg: #131519;
     --surface: #1b1e23;
     --surface-2: #23272e;
@@ -236,7 +250,7 @@
       margin-top: 0; gap: 0; overflow: visible;
       background: var(--surface);
       border-top: 1px solid var(--border);
-      padding-bottom: env(safe-area-inset-bottom);
+      padding-bottom: var(--sa-b);
       box-shadow: 0 -6px 20px -14px rgba(0,0,0,.7);
     }
     .viewtab{
@@ -257,19 +271,15 @@
     .tile .ring{ width: 20px; height: 20px; border-width: 4px; }
   }
 
-  /* Notched phones: keep content clear of the home indicator and rounded corners */
-  @supports (padding: max(0px)){
-    @media (max-width: 920px){
-      header{ padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
-      main{ padding-bottom: 20px; }
-    }
-  }
+  /* Superseded by the "Notched phones" block at the foot of this stylesheet,
+     which has to be last to survive the phone block's padding shorthands. */
+  @media (max-width: 920px){ main{ padding-bottom: 20px; } }
 
   /* Floating controls — phone only. Stacked so they collapse cleanly when one
      is hidden, instead of each being pinned to its own fixed offset. */
   .fab-stack{
     display: none;
-    position: fixed; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 74px);
+    position: fixed; right: max(16px, var(--sa-r)); bottom: calc(var(--sa-b) + 74px);
     z-index: 45; flex-direction: column; align-items: flex-end; gap: 10px;
     pointer-events: none;   /* the empty gaps must not swallow taps */
   }
@@ -489,7 +499,7 @@
   .last-time b{ color: var(--text-dim); font-weight:500; }
 
   .set-head{ display:flex; align-items:center; gap:8px; padding-bottom:1px; }
-  .set-head .col-lbl{ flex:1; min-width:0; font-size:8.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); }
+  .set-head .col-lbl{ flex:1; min-width:0; text-align:center; font-size:8.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); }
   .set-head .col-spacer{ width:20px; flex:none; }
   .set-row .set-input{ flex:1; min-width:0; background: var(--surface); border:1px solid var(--border); border-radius:6px; color: var(--text); padding:6px 8px; font-size:12.5px; font-family:'JetBrains Mono',monospace; text-align:center; }
   .set-row .set-input::placeholder{ color: var(--text-faint); }
@@ -800,17 +810,193 @@
      bottom tab bar. Declared after the base rule above — an earlier media query
      would lose the cascade to it at equal specificity. */
   @media (max-width: 920px){
-    footer{ padding: 10px 16px calc(88px + env(safe-area-inset-bottom)); }
+    footer{ padding: 10px max(16px, var(--sa-r)) calc(88px + var(--sa-b)) max(16px, var(--sa-l)); }
   }
   footer a{ color: var(--text-dim); text-decoration: underline; text-underline-offset:2px; }
 
   .toast{
     position: fixed; bottom:18px; left:50%; transform: translateX(-50%) translateY(8px);
+    max-width: calc(100vw - 32px);
     background: var(--surface-2); border:1px solid var(--border); color: var(--text);
     padding:9px 16px; border-radius:999px; font-size:12.5px; box-shadow: var(--shadow);
     opacity:0; pointer-events:none; transition: opacity .18s ease, transform .18s ease; z-index:80;
   }
   .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+  /* ================= Phone sizing =================
+     This block is deliberately last in the stylesheet. Nearly every rule it
+     narrows is declared further up, and at equal specificity the later rule
+     wins — an earlier media query would silently lose to the base rule it
+     means to override (that has already bitten this file twice).
+
+     Measured at 390x844 with a real mobile viewport: before this block the
+     first exercise card sat at y=872, i.e. a whole screen of chrome before any
+     content. The budget below puts it above the fold. */
+  @media (max-width: 560px){
+    main{ padding: 13px 14px 16px; }
+
+    /* --- Header: mark, name, and the two pills. --- */
+    header{ padding: 9px 14px; }
+    .brand-text h1{ font-size: 17px; }
+    .plate-mark{ width: 26px; height: 26px; }
+    .header-top{ gap: 8px; }
+    .count-badge{ padding: 4px 10px; font-size: 11.5px; }
+    .avatar-btn{ padding: 3px 9px 3px 3px; }
+    .avatar{ width: 22px; height: 22px; font-size: 10.5px; }
+    .avatar-btn .who{ max-width: 84px; font-size: 12px; }
+
+    .mode-switch{ margin-bottom: 12px; border-radius: 9px; }
+    .mode-switch button{ padding: 9px 6px; font-size: 11.5px; }
+
+    /* --- Split loader: the explanatory line is onboarding copy that costs a
+       third of the card on every visit. Title plus day chips do the job. --- */
+    .splits{ padding: 11px 12px; margin-bottom: 13px; }
+    /* Keep the title and its button on one line: the split name can be long
+       ("Push / Pull / Legs — Split Loader"), and letting it wrap pushes the
+       button onto a row of its own for no gain. */
+    .splits-head{ margin-bottom: 9px; align-items: center; gap: 8px; flex-wrap: nowrap; }
+    .splits-head > div{ min-width: 0; }
+    .splits-head h2{
+      font-size: 13px; margin-bottom: 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .splits-head p{ display: none; }
+    .splits-head .btn{ padding: 6px 11px; font-size: 11.5px; }
+    .split-row{ gap: 7px; }
+    .split-btn{ padding: 8px 13px; font-size: 12px; }
+
+    .all-pill{ margin-bottom: 9px; padding: 5px 12px; font-size: 11.5px; }
+
+    /* --- Categories: four across as a strip, not a 2x2 of paragraphs. The
+       muscle list each tile spelled out is exactly what the chip row below now
+       answers, so it is redundant here; the count stays. --- */
+    .tiles{ grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 11px; }
+    .tile{ padding: 10px 4px 9px; gap: 6px; align-items: center; text-align: center; }
+    .tile:hover{ transform: none; }          /* no hover state on a touch screen */
+    .tile .ring{ width: 18px; height: 18px; border-width: 4px; }
+    .tile .label{ font-size: 11.5px; letter-spacing: .02em; }
+    .tile .sub{ font-size: 10.5px; }
+    .tile .sub-groups{ display: none; }
+    .tile.active::after{ height: 2px; }
+
+    /* --- Muscle-group chips. They scroll sideways whenever a category has
+       more than three groups, so the row fades at its trailing edge instead of
+       ending in a chip sliced off mid-word. --- */
+    .subgroups{
+      gap: 6px; margin-bottom: 12px; scroll-padding-inline: 14px;
+      --fade: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+      -webkit-mask-image: var(--fade); mask-image: var(--fade);
+    }
+    .subgroups.at-start{ --fade: linear-gradient(to right, #000 calc(100% - 24px), transparent); }
+    .subgroups.at-end{   --fade: linear-gradient(to right, transparent, #000 24px); }
+    .subgroups.at-start.at-end{ -webkit-mask-image: none; mask-image: none; }
+    .sg-chip{ padding: 8px 12px; gap: 6px; font-size: 12px; min-height: 36px; }
+    .sg-chip .sg-n{ font-size: 10px; }
+
+    /* --- Toolbar: search owns its own line so the placeholder is readable. --- */
+    .toolbar{ gap: 8px; margin-bottom: 14px; }
+    .search{ flex: 1 1 100%; }
+    .equip-filter{ flex: 1; min-width: 0; }
+    .toolbar .btn{ flex: none; }
+
+    /* Safari zooms the page when a focused field is under 16px, which on this
+       screen means every reps and weight box. Sizing them up is cheaper than
+       fighting the zoom afterwards. */
+    .search, .equip-filter, .set-row .set-input, .sets-input,
+    input[type="text"], input[type="number"], input[type="date"],
+    input[type="email"], textarea, select{ font-size: 16px; }
+    .sets-input{ width: 42px; }
+
+    .group{ margin-bottom: 18px; }
+    .group-head h3{ font-size: 13.5px; }
+
+    /* --- Workout mode. The browse column is an empty grid cell here, so its
+       gap is dead space above the tray. --- */
+    .layout{ gap: 14px; }
+    .tray{ padding: 13px 12px; }
+    .tray-item{ padding: 10px 9px 9px; }
+
+    /* Fingers, not a mouse pointer: the set controls were sized for a cursor
+       and a checkbox at 20px is the smallest thing on the busiest screen. */
+    .icon-btn{ width: 32px; height: 32px; }
+    .check-wrap{ width: 28px; height: 28px; }
+    .set-head .col-spacer{ width: 28px; }
+    .set-row{ gap: 7px; }
+    .set-row .set-num{ width: 38px; }
+    .set-row .set-input{ padding: 7px 6px; }
+
+    /* --- Every view leads with a paragraph explaining what the tab is for.
+       That is onboarding copy: useful once, three or four lines of a phone
+       screen forever after. The headings carry the same meaning. --- */
+    .view-intro{ margin-bottom: 12px; }
+    .view-intro p{ display: none; }
+    .view-intro h2{ font-size: 16px; }
+    .splits-head p{ display: none; }
+
+    /* Stat tiles keep all three lines but stop being posters. */
+    .stat-row{ gap: 8px; margin-bottom: 13px; }
+    .stat-tile{ padding: 10px 11px; }
+    .stat-tile .k{ font-size: 9.5px; }
+    .stat-tile .v{ font-size: 21px; margin-top: 3px; }
+    .stat-tile .u{ font-size: 11px; margin-top: 2px; }
+
+    .pr-card{ padding: 13px 12px 12px; }
+    .pr-hero{ margin: 10px 0 4px; }
+    .pr-hero .big{ font-size: 30px; }
+    .pr-card .pr-caption{ margin-top: 11px; }
+    .pr-nodata{ padding: 12px 0 10px; }
+  }
+
+  /* ================= Notched phones =================
+     Last block in the file, and it must stay that way. Every rule here restores
+     an inset that an earlier shorthand would otherwise flatten — the phone
+     block above sets `header{ padding: 9px 14px }`, which silently wiped the
+     landscape inset that used to live in a @supports block near the top.
+
+     The insets that matter, per orientation:
+       portrait   home indicator at the bottom (--sa-b, ~34px)
+       landscape  Dynamic Island / notch on one side and the rounded corner on
+                  the other (--sa-l / --sa-r, ~59px), shorter bottom bar
+     The top inset is 0 in standalone iOS with status-bar-style "default",
+     because iOS reserves the status bar itself — max() below means the layout
+     is still right if that ever stops being true. */
+  @media (max-width: 920px){
+    header{
+      padding-top: max(9px, var(--sa-t));
+      padding-left: max(14px, var(--sa-l));
+      padding-right: max(14px, var(--sa-r));
+    }
+    main{
+      padding-left: max(14px, var(--sa-l));
+      padding-right: max(14px, var(--sa-r));
+    }
+    /* The tab bar spans the full width, so its padding — not a margin — is what
+       keeps the outer icons off the corner radius and the island. */
+    .viewtabs{
+      padding-left: var(--sa-l);
+      padding-right: var(--sa-r);
+      padding-bottom: var(--sa-b);
+    }
+    .toast{ bottom: calc(var(--sa-b) + 74px); }
+  }
+
+  /* A phone turned sideways is wide enough to miss the 560px breakpoint but
+     only ~390px tall, and the bottom bar and split loader together leave
+     almost no list. Height is what is scarce here, so trim by height. */
+  @media (max-width: 920px) and (max-height: 500px){
+    .splits{ padding: 10px 12px; margin-bottom: 12px; }
+    .splits-head{ margin-bottom: 8px; align-items: center; }
+    .splits-head p{ display: none; }
+    .splits-head h2{ font-size: 13px; margin-bottom: 0; }
+    .view-intro{ margin-bottom: 10px; }
+    .view-intro p{ display: none; }
+    .mode-switch{ margin-bottom: 10px; }
+    .tile{ padding: 9px 10px 8px; gap: 8px; }
+    .tile .sub{ display: none; }
+    .tiles{ margin-bottom: 12px; }
+    header{ padding-top: max(7px, var(--sa-t)); padding-bottom: 7px; }
+    .brand-text h1{ font-size: 17px; }
+  }
 </style>
 
 <header>
@@ -1794,7 +1980,7 @@
       tile.type = "button";
       tile.className = "tile" + (activeCat===cat ? " active" : "");
       tile.dataset.cat = cat;
-      tile.innerHTML = `<span class="ring"></span><span class="label">${CAT_LABEL[cat]}</span><span class="sub">${CAT_SUB[cat]} · ${count}</span>`;
+      tile.innerHTML = `<span class="ring"></span><span class="label">${CAT_LABEL[cat]}</span><span class="sub"><span class="sub-groups">${CAT_SUB[cat]} · </span>${count}</span>`;
       tile.addEventListener("click", ()=>{
         activeCat = (activeCat === cat) ? null : cat;
         activeGroup = null;            // a new category starts on all of its groups
@@ -1830,6 +2016,7 @@
                + `${esc(g)}<span class="sg-n">${n}</span></button>`;
         }).join("");
 
+    markChipEdges();
     subgroupsEl.querySelectorAll(".sg-chip").forEach(chip=>{
       chip.addEventListener("click", ()=>{
         activeGroup = chip.dataset.g || null;
@@ -1837,6 +2024,18 @@
       });
     });
   }
+
+  /* The chip row scrolls sideways once a category has more than three groups.
+     Fade only the edge that has something hidden behind it, so a half-visible
+     chip reads as "there is more this way" rather than as a clipping bug. */
+  function markChipEdges(){
+    const el = subgroupsEl;
+    const max = el.scrollWidth - el.clientWidth;
+    el.classList.toggle("at-start", el.scrollLeft <= 1);
+    el.classList.toggle("at-end", el.scrollLeft >= max - 1);
+  }
+  subgroupsEl.addEventListener("scroll", markChipEdges, { passive: true });
+  window.addEventListener("resize", markChipEdges);
 
   const equipSel = document.getElementById("equipFilter");
   equipSel.addEventListener("change", ()=>{ equip = equipSel.value; renderGroups(); });
@@ -2378,7 +2577,10 @@
   function renderSplitLoader(){
     const def = splitDef(activeSplit);
     const days = splitDays(activeSplit);
-    document.getElementById("loaderTitle").textContent = def.name + " — Split Loader";
+    /* On a phone the suffix is the first thing to get ellipsed, and the split
+       name is the part that actually varies. */
+    document.getElementById("loaderTitle").textContent =
+      window.matchMedia("(max-width: 560px)").matches ? def.name : def.name + " — Split Loader";
     document.getElementById("loaderSub").textContent =
       `${def.freq} · ${def.goal}. One tap loads a day into your workout tray.` + (isEdited(activeSplit) ? " (edited)" : "");
     splitRow.innerHTML = days.map((d,i)=>{
@@ -3841,6 +4043,17 @@
   renderIdentity();
   refreshExerciseLists();
   setTrainMode(tray.length ? "workout" : "browse");
+  /* The full placeholder is cut off mid-word in a phone-width field, so the
+     example list is dropped there. Bound to the same query the CSS uses. */
+  (function(){
+    const box = document.getElementById("search");
+    const long = box.placeholder;
+    const mq = window.matchMedia("(max-width: 560px)");
+    const apply = ()=>{ box.placeholder = mq.matches ? "Search exercises\u2026" : long; };
+    apply();
+    mq.addEventListener ? mq.addEventListener("change", apply) : mq.addListener(apply);
+  })();
+
   renderTiles();
   renderSubgroups();
   renderGroups();
