@@ -63,6 +63,9 @@ knowing:
 - Clearing site data for this origin erases your history.
 - Your phone and your laptop keep separate copies. The share code is how you
   move a workout between them.
+- If the device's storage is full or blocked, a banner says so at the top of the
+  page. Anything logged while that banner is up is lost on reload — copy the
+  session out through Settings → Share before closing the app.
 
 Keys are all prefixed `ptp-`: `ptp-tray`, `ptp-history`, `ptp-prs`,
 `ptp-splits`, `ptp-profile`, `ptp-settings`, `ptp-theme`, `ptp-active-split`,
@@ -158,17 +161,41 @@ Things that look like details and are not:
 10. **Bump `VERSION` in `sw.js` on every change.** Installed copies serve from
     the old cache until the version string changes.
 
+11. **The service worker only caches a response that proves it is this page.**
+    A captive portal answers a same-origin GET with 200 and its own sign-in HTML,
+    which status and type cannot tell apart from a deploy — and caching it
+    replaces the offline app with the portal, permanently. The page carries a
+    `<meta name="ptp-app">` sentinel and the worker checks for it before writing
+    the shell. Do not remove that meta tag.
+
+12. **`load()` takes a shape validator, and every call site passes one.**
+    `JSON.parse` succeeding says nothing about shape. One wrong-typed value used
+    to throw during init, before any listener was attached — so the tabs went
+    dead and Settings → Reset, the only in-app way out, was unreachable. Init is
+    also stepped, so one broken panel costs that panel and nothing else.
+
+13. **Category colours are two sets, not one.** The saturated hues are for a
+    filled surface with white ink on it. `--push-ink` and friends are the same
+    hues re-searched in OKLCH for 4.5:1 as *text*; deriving them by lifting
+    luminance alone walks push-red and legs-gold back together under
+    deuteranopia. Calendar dots carry category by colour alone, so they also
+    carry a shape — circle, square, diamond, bar.
+
 ### The share format
 
 ```
-PTP2~W~<name>~<item>!<item>…                 one workout
-PTP2~L~<name>~<YYYYMMDD>~<off>=<items>;…     a training log
+PTP2~W<u>~<name>~<item>!<item>…                 one workout
+PTP2~L<u>~<name>~<YYYYMMDD>~<off>=<items>;…     a training log
 
+<u>     unit the weights are in: "k" kg, "l" lb. Absent on codes written before
+        units were carried; those read as kg and are converted on import.
 item = <ref><mode><body>[+<letter>]
-  ref   base36 index into the built-in catalogue, or "?" + base64url(name)
+  ref   base36 index into the built-in catalogue, or "?" + base64url of
+        "<name>" or "<name>\u001f<cat>\u001e<equipment>" for your own exercises
   mode  "*" = a plain set count
         ":" = "-"-joined sets, each "80x8" (weight × reps) or a bare rep count
-  +A    superset group, if any
+  +A    superset group, scoped to this one message
+  off   days after the start date, base36, 0…3650
 ```
 
 The importer also still reads the older `PTP1` base64 format, so codes shared

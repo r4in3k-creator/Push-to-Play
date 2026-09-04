@@ -12,11 +12,23 @@
      landscape puts the island and the rounded corners on the sides regardless. -->
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Push to Play">
+<!-- Sentinel the service worker looks for before it lets a response become the
+     cached offline copy. A captive portal answers same-origin 200 with its own
+     HTML, which is otherwise indistinguishable from a deploy. -->
+<meta name="ptp-app" content="push-to-play">
 <meta name="description" content="Push / Pull / Legs / Abs workout tracker — split templates, set-by-set logging, training calendar and personal records.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<!-- Loaded non-blocking. As a plain stylesheet this gated first paint on a
+     third party: the whole UI is built by the inline script below, and a
+     script cannot run while a stylesheet is pending — so a hung
+     fonts.googleapis.com left a perfectly cached app painting nothing at
+     all. The fallback stacks carry the layout until it arrives. -->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
+      href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"></noscript>
 <style>
   /* ================= Tokens — dark-first (a gym tool lives on a dim screen) =================
      Category hues are the IWF bumper-plate set (red / blue / gold / green), re-stepped so all
@@ -40,13 +52,41 @@
     --border-soft: #282d35;
     --text: #e6e8ec;
     --text-dim: #9aa1ac;
-    --text-faint: #6b727d;
+    /* Was #6b727d, which measured 2.69:1 on --surface-3 — this token carries the
+       form labels, the tab labels in their resting state, the calendar day-of-week
+       row and the set numbers, so it was the widest contrast failure in the app.
+       4.50:1 on the worst surface it lands on. */
+    --text-faint: #9398a0;
+    /* Only for the edge of a control the user is meant to type in or press. A 1px
+       --border on a card is decoration; on an input it is the entire affordance,
+       and 1.46:1 made the fields invisible on a bright screen. */
+    --border-strong: #757a80;
 
     --push: #c04529;
     --pull: #2c6bb0;
     --legs: #94670c;
     --abs:  #00846f;
     --superset: #b48ad8;
+
+    /* The category hues above are tuned for white ink sitting ON them. Used AS
+       text they only reached 3.05–3.94:1 on these surfaces, so the section
+       headings get their own variants at 4.5:1.
+
+       Deriving these by lifting luminance alone is what produced the first
+       attempt, and it walked push-red and legs-gold back to ΔE 2.6 under
+       deuteranopia — the same collapse the fill palette was fixed for. These are
+       searched in OKLCH instead, holding each hue and taking the set closest to
+       the originals that keeps every pair at or above the ΔE 6 CVD floor under
+       protan and deutan; worst pair is now 6.2.
+
+       They are not a categorical palette and are not held to that bar: the
+       heading these colour reads "PUSH — CHEST", so the word is the encoding and
+       the colour reinforces it. The fill palette, which does encode by colour
+       alone on the calendar dots, is unchanged and still passes all-pairs. */
+    --push-ink: #c86b55;
+    --pull-ink: #5588c4;
+    --legs-ink: #c08b2d;
+    --abs-ink:  #00967e;
 
     /* Ink for text sitting ON a filled accent. All four of these accents are deep
        enough that white clears 4.5:1 on every one (4.64–5.47). */
@@ -71,13 +111,18 @@
       --border-soft: #e2e5e8;
       --text: #191c20;
       --text-dim: #5b626b;
-      --text-faint: #8b939c;
+      --text-faint: #676c73;
+      --border-strong: #87898c;
 
       --push: #c04529;
       --pull: #2c6bb0;
       --legs: #94670c;
       --abs:  #00846f;
       --superset: #7a4aa8;
+      --push-ink: #963620;
+      --pull-ink: #2267b0;
+      --legs-ink: #8c651f;
+      --abs-ink:  #117966;
 
       --on-push: #ffffff;
       --on-pull: #ffffff;
@@ -99,13 +144,18 @@
     --border-soft: #e2e5e8;
     --text: #191c20;
     --text-dim: #5b626b;
-    --text-faint: #8b939c;
+    --text-faint: #676c73;
+    --border-strong: #87898c;
 
     --push: #c04529;
     --pull: #2c6bb0;
     --legs: #94670c;
     --abs:  #00846f;
     --superset: #7a4aa8;
+    --push-ink: #963620;
+    --pull-ink: #2267b0;
+    --legs-ink: #8c651f;
+    --abs-ink:  #117966;
 
     --on-push: #ffffff;
     --on-pull: #ffffff;
@@ -364,8 +414,19 @@
   .tile.active{ border-color: var(--tile-color); box-shadow: 0 0 0 1px var(--tile-color) inset; }
   .tile.active::after{ content:""; position:absolute; inset:auto 0 0 0; height:3px; background: var(--tile-color); border-radius:0 0 var(--radius) var(--radius); }
 
+  .skip-link{
+    position:absolute; left:8px; top:8px; z-index:100;
+    transform: translateY(-160%); transition: transform .15s ease;
+    background: var(--surface-2); color: var(--text); border:1px solid var(--border-strong);
+    border-radius:8px; padding:9px 14px; font-size:13px; text-decoration:none;
+  }
+  .skip-link:focus{ transform: translateY(0); }
+
+  .field-lbl{ display:block; font-size:11.5px; color: var(--text-faint);
+    text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+
   .all-pill{
-    display:inline-flex; align-items:center; font-size:12px; color: var(--text-dim);
+    display:inline-flex; align-items:center; font-family:inherit; font-size:12px; color: var(--text-dim);
     background: var(--surface); border:1px solid var(--border); border-radius:999px; padding:6px 13px;
     cursor:pointer; margin-bottom:14px;
   }
@@ -402,7 +463,9 @@
   /* ================= Exercise list ================= */
   .group{ margin-bottom:22px; }
   .group-head{ display:flex; align-items:baseline; gap:10px; margin-bottom:10px; border-bottom:1px solid var(--border-soft); padding-bottom:6px; }
-  .group-head h3{ font-size:14.5px; color: var(--group-color); }
+  /* The heading is 14.5px Oswald 600 — under the large-text threshold, so it
+     needs 4.5:1 and the fill colour only reached 3.05–3.94 in dark. */
+  .group-head h3{ font-size:14.5px; color: var(--group-text, var(--group-color)); }
   .group-head .n{ font-size:11.5px; color: var(--text-faint); font-family:'JetBrains Mono',monospace; }
   .cards{ display:grid; grid-template-columns: repeat(2,1fr); gap:8px; }
   @media (max-width:700px){ .cards{ grid-template-columns:1fr; } }
@@ -411,13 +474,13 @@
   .card .name{ font-size:13.8px; font-weight:500; }
   .card .meta{ margin-top:3px; display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
   .card .xrx{ font-size:11px; color: var(--text-faint); text-decoration:none; }
-  .card .xrx:hover{ color: var(--group-color); }
+  .card .xrx:hover{ color: var(--group-text, var(--group-color)); }
   .add-btn{
     flex:none; width:30px; height:30px; border-radius:50%; border:1px solid var(--border);
     background: var(--surface-2); font-size:17px; cursor:pointer; line-height:1;
     display:flex; align-items:center; justify-content:center;
   }
-  .add-btn:hover{ border-color: var(--group-color); color: var(--group-color); }
+  .add-btn:hover{ border-color: var(--group-color); color: var(--group-text, var(--group-color)); }
   .add-btn.added{ background: var(--group-color); border-color: var(--group-color); color: var(--group-ink, var(--bg)); }
   .empty-state{ color: var(--text-dim); font-size:13.5px; padding:30px 4px; }
 
@@ -558,11 +621,24 @@
   .cal-cell.today .dnum{ color: var(--text); font-weight:600; }
   .cal-cell.selected{ box-shadow: 0 0 0 2px var(--text) inset; }
   .cal-cell.has-session{ background: var(--surface-2); }
-  .cal-dots{ display:flex; gap:3px; flex-wrap:wrap; }
-  .cal-dots span{ width:7px; height:7px; border-radius:50%; }
+  /* The calendar dot is the one place in the app where a category is carried by
+     colour and nothing else — every other use sits next to the word. Push-red and
+     legs-gold are ΔE 1.7 apart under deuteranopia, so a shape goes with the hue:
+     circle, square, diamond, bar. That is the secondary encoding that makes a
+     close pair readable, and it keeps the chosen hues untouched. */
+  .cal-dots{ display:flex; gap:3px; flex-wrap:wrap; align-items:center; }
+  .cal-dots span{ width:7px; height:7px; }
+  .cal-dots span[data-cat="push"]{ border-radius:50%; }
+  .cal-dots span[data-cat="pull"]{ border-radius:1px; }
+  .cal-dots span[data-cat="legs"]{ border-radius:1px; transform: rotate(45deg) scale(.82); }
+  .cal-dots span[data-cat="abs"] { border-radius:999px; width:11px; height:5px; }
   .cal-legend{ display:flex; gap:14px; flex-wrap:wrap; margin-top:14px; font-size:11.5px; color: var(--text-dim); }
   .cal-legend .li{ display:flex; align-items:center; gap:6px; }
-  .cal-legend .sw{ width:9px; height:9px; border-radius:50%; }
+  .cal-legend .sw{ width:9px; height:9px; }
+  .cal-legend .sw[data-cat="push"]{ border-radius:50%; }
+  .cal-legend .sw[data-cat="pull"]{ border-radius:1px; }
+  .cal-legend .sw[data-cat="legs"]{ border-radius:1px; transform: rotate(45deg) scale(.82); }
+  .cal-legend .sw[data-cat="abs"] { border-radius:999px; width:13px; height:6px; }
 
   .day-detail{ margin-top:18px; }
   .day-detail h3{ font-size:14px; margin-bottom:3px; }
@@ -576,7 +652,7 @@
   .pr-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(330px,1fr)); gap:14px; }
   .pr-card{ background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); border-top:3px solid var(--lift-color); padding:15px 15px 13px; position:relative; }
   .pr-card .pr-head{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
-  .pr-card h3{ font-size:14.5px; color: var(--lift-color); }
+  .pr-card h3{ font-size:14.5px; color: var(--lift-text, var(--lift-color)); }
   .pr-card .eqline{ font-size:11px; color: var(--text-faint); margin-top:3px; }
   .pr-card .pr-caption{ margin-top:14px; }
   .pr-hero{ display:flex; align-items:baseline; gap:12px; margin:14px 0 4px; flex-wrap:wrap; }
@@ -605,7 +681,7 @@
   .pr-hist .h-row{ display:flex; align-items:center; gap:8px; font-size:11.5px; color: var(--text-dim); }
   .pr-hist .h-row .d{ font-family:'JetBrains Mono',monospace; width:76px; flex:none; color: var(--text-faint); }
   .pr-hist .h-row .w{ font-family:'JetBrains Mono',monospace; flex:1; color: var(--text); }
-  .pr-hist .h-row .pr-flag{ color: var(--lift-color); font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+  .pr-hist .h-row .pr-flag{ color: var(--lift-text, var(--lift-color)); font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
   .pr-hist .h-row .del{ background:none; border:none; color: var(--text-faint); cursor:pointer; font-size:13px; padding:0 2px; }
   .pr-hist .h-row .del:hover{ color: var(--danger); }
   .pr-table{ width:100%; border-collapse: collapse; font-size:12px; margin-top:8px; }
@@ -648,7 +724,7 @@
   .new-ex-panel .lede{ font-size:12.5px; color: var(--text-dim); margin:5px 0 14px; max-width:64ch; }
   .new-ex-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
   @media (max-width:560px){ .new-ex-grid{ grid-template-columns:1fr; } }
-  .badge.custom-badge{ color: var(--group-color); border-color: var(--group-color); }
+  .badge.custom-badge{ color: var(--group-text, var(--group-color)); border-color: var(--group-color); }
   .card .del-custom{
     flex:none; width:22px; height:22px; border-radius:6px; border:1px solid var(--border);
     background: var(--surface-2); color: var(--text-faint); font-size:12px; line-height:1; cursor:pointer;
@@ -813,6 +889,38 @@
     footer{ padding: 10px max(16px, var(--sa-r)) calc(88px + var(--sa-b)) max(16px, var(--sa-l)); }
   }
   footer a{ color: var(--text-dim); text-decoration: underline; text-underline-offset:2px; }
+
+  .banner{
+    background: var(--surface-2); border:1px solid var(--border);
+    border-left:3px solid var(--text-dim); border-radius: var(--radius);
+    padding:11px 14px; margin-bottom:16px; font-size:13px; line-height:1.5;
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  }
+  .banner strong{ font-weight:600; }
+  .banner .btn{ flex:none; margin-left:auto; }
+  .banner-danger{ border-left-color: var(--danger); }
+
+  /* Controls the user types in or presses get the stronger edge; card and section
+     borders keep the quiet one. WCAG 1.4.11 wants 3:1 for a control whose only
+     visual boundary is its border, which is exactly the case here. */
+  input[type="text"], input[type="number"], input[type="date"], input[type="email"],
+  textarea, select, .btn, .search, .equip-filter, .set-row .set-input, .sets-input,
+  .check-wrap .checkmark, .icon-btn, .pr-form input{
+    border-color: var(--border-strong);
+  }
+
+  /* These three replaced the focus outline with a border tint that measured
+     2.25:1 against the unfocused border in dark — below the 3:1 that 2.4.11 asks
+     of a focus indicator, and this is the app's default theme. The outline goes
+     back; the tint stays as a second cue. */
+  .set-row .set-input:focus, .day-name-input:focus, .pr-form input:focus{
+    outline: 2px solid var(--text-dim);
+    outline-offset: 1px;
+  }
+  .check-wrap input:focus-visible ~ .checkmark{
+    outline: 2px solid var(--text-dim);
+    outline-offset: 2px;
+  }
 
   .toast{
     position: fixed; bottom:18px; left:50%; transform: translateX(-50%) translateY(8px);
@@ -999,6 +1107,7 @@
   }
 </style>
 
+<a class="skip-link" href="#main">Skip to content</a>
 <header>
   <div class="header-top">
     <div class="brand">
@@ -1057,7 +1166,21 @@
   </nav>
 </header>
 
-<main>
+<main id="main">
+  <div class="banner banner-danger" id="storageWarn" role="alert" hidden>
+    <strong>Not saving.</strong> This device&rsquo;s storage is full or blocked, so
+    nothing you log right now will still be here after a reload. Free some space,
+    or use Settings &rarr; Share to copy this session out before you close the app.
+  </div>
+  <div class="banner" id="dataWarn" role="alert" hidden>
+    <strong>Some saved data could not be read</strong>, so these parts started
+    empty: <span id="dataWarnWhat"></span>. Everything else still works. Settings
+    &rarr; Reset clears the stored data if the problem persists.
+  </div>
+  <div class="banner" id="updateWarn" hidden>
+    <strong>A new version is ready.</strong>
+    <button type="button" class="btn" id="updateReload">Reload to update</button>
+  </div>
   <div class="layout" id="layout">
     <div>
       <!-- ============ TRAIN ============ -->
@@ -1079,16 +1202,16 @@
           <div class="split-row" id="splitRow"></div>
         </div>
 
-        <div class="all-pill active" id="allPill">All categories</div>
+        <button type="button" class="all-pill active" id="allPill" aria-pressed="true">All categories</button>
         <div class="tiles" id="tiles"></div>
         <div class="subgroups" id="subgroups" hidden></div>
 
         <div class="toolbar">
-          <input class="search" id="search" type="text" placeholder="Search exercises… (e.g. curl, squat, cable)">
+          <input class="search" id="search" type="text" aria-label="Search exercises" placeholder="Search exercises… (e.g. curl, squat, cable)">
           <select class="equip-filter" id="equipFilter" aria-label="Filter by equipment">
             <option value="">All equipment</option>
           </select>
-          <button type="button" class="btn" id="newExBtn">+ New exercise</button>
+          <button type="button" class="btn" id="newExBtn" aria-expanded="false" aria-controls="newExPanel">+ New exercise</button>
         </div>
 
         <div class="panel new-ex-panel" id="newExPanel" hidden>
@@ -1161,10 +1284,10 @@
           </div>
           <div class="cal-grid" id="calGrid"></div>
           <div class="cal-legend">
-            <span class="li"><span class="sw" style="background:var(--push)"></span>Push</span>
-            <span class="li"><span class="sw" style="background:var(--pull)"></span>Pull</span>
-            <span class="li"><span class="sw" style="background:var(--legs)"></span>Legs</span>
-            <span class="li"><span class="sw" style="background:var(--abs)"></span>Abs</span>
+            <span class="li"><span class="sw" data-cat="push" style="background:var(--push)"></span>Push</span>
+            <span class="li"><span class="sw" data-cat="pull" style="background:var(--pull)"></span>Pull</span>
+            <span class="li"><span class="sw" data-cat="legs" style="background:var(--legs)"></span>Legs</span>
+            <span class="li"><span class="sw" data-cat="abs" style="background:var(--abs)"></span>Abs</span>
           </div>
         </div>
         <div class="panel day-detail" id="dayDetail"></div>
@@ -1271,7 +1394,7 @@
               <input type="number" id="stDefaultRest" min="0" max="600" step="5">
             </div>
             <div class="field wide">
-              <label>Theme</label>
+              <span class="field-lbl">Theme</span>
               <div class="seg" id="themeSeg" role="group" aria-label="Theme">
                 <button type="button" data-theme-choice="system">Auto</button>
                 <button type="button" data-theme-choice="light">Light</button>
@@ -1358,7 +1481,7 @@
         <div class="panel share-card">
           <h3>Import a shared workout</h3>
           <p class="lede">Got a plan from someone? Paste their whole message below — the code is found automatically — or pick the file they sent you.</p>
-          <textarea class="import-area" id="importArea" placeholder="Paste the message or import code here…"></textarea>
+          <textarea class="import-area" id="importArea" aria-label="Paste a shared workout or import code" placeholder="Paste the message or import code here…"></textarea>
           <div class="file-row">
             <label class="file-label">
               <span>⬆</span> Choose a file
@@ -1390,10 +1513,10 @@
         <button type="button" class="btn" id="emptyBrowse">Browse exercises</button>
       </div>
       <div class="tray-actions">
-        <button class="log" id="logBtn">Log session to today</button>
+        <button type="button" class="log" id="logBtn">Log session to today</button>
         <div class="row2">
-          <button class="copy" id="copyBtn">Copy as text</button>
-          <button class="clear" id="clearBtn">Clear all</button>
+          <button type="button" class="copy" id="copyBtn">Copy as text</button>
+          <button type="button" class="clear" id="clearBtn">Clear all</button>
         </div>
       </div>
     </aside>
@@ -1417,7 +1540,9 @@
   </button>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- The app's only feedback channel — every confirmation, validation error and
+     import result. role="status" is what makes any of it reach a screen reader. -->
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
 (function(){
@@ -1739,16 +1864,82 @@
                 splits:"ptp-splits", activeSplit:"ptp-active-split",
                 customEx:"ptp-custom-ex", customSplits:"ptp-custom-splits" };
 
-  function load(key, fallback){
+  /* Everything here comes back from storage that an older version of this app
+     wrote, that a sync tool touched, or that a user pasted in by hand. JSON.parse
+     succeeding says nothing about shape, and until this guard existed a single
+     wrong-typed value (a string where an array belonged, one null inside a list)
+     threw during init — before any event listener was attached, so the tabs went
+     dead and Settings → Reset, the one in-app way out, was unreachable. */
+  function load(key, fallback, isValid){
     try{
       const raw = localStorage.getItem(key);
       if(raw === null) return fallback;
       const parsed = JSON.parse(raw);
-      return (parsed === null || parsed === undefined) ? fallback : parsed;
+      if(parsed === null || parsed === undefined) return fallback;
+      if(isValid && !isValid(parsed)) return fallback;
+      return parsed;
     }catch(e){ return fallback; }
   }
+  /* Shape guards. Deliberately shallow — enough that the render paths cannot
+     throw, not a schema validator. */
+  const isObj      = v => v !== null && typeof v === "object" && !Array.isArray(v);
+  const isArrOf    = pred => v => Array.isArray(v) && v.every(pred);
+  const arrOfObj   = isArrOf(isObj);
+  /* An older profile that stored name:null must not override the "" default,
+     which is what Object.assign would otherwise do. */
+  const definedOnly = o => {
+    const out = {};
+    if(isObj(o)) for(const k in o){ if(o[k] !== null && o[k] !== undefined) out[k] = o[k]; }
+    return out;
+  };
+
+  let storageBroken = false;
   function save(key, value){
-    try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){}
+    try{
+      localStorage.setItem(key, JSON.stringify(value));
+      if(storageBroken){ storageBroken = false; updateStorageWarning(); }
+      return true;
+    }catch(e){
+      /* Quota exceeded, or storage blocked. Silence here meant a user could log a
+         full session, watch the counters move, and lose all of it on reload. */
+      if(!storageBroken){ storageBroken = true; updateStorageWarning(); }
+      return false;
+    }
+  }
+  function updateStorageWarning(){
+    const el = document.getElementById("storageWarn");
+    if(el) el.hidden = !storageBroken;
+  }
+
+  /* Every renderer here replaces a container's contents outright, which destroys
+     whatever node had focus — and nothing put it back, so the focus ring vanished
+     on every filter click and, worse, on every set ticked off mid-workout. A
+     screen-reader user lands on <body> and the virtual cursor jumps to the top of
+     the page. This records enough to find the same control again afterwards.
+
+     Identity is (a stable ancestor key, the control's own key), because the node
+     itself will not exist by the time we look. */
+  function keepFocus(container, run){
+    const active = document.activeElement;
+    const inside = active && container.contains(active) && active !== container;
+    let sel = null, scrollTop = 0;
+    if(inside){
+      const item = active.closest("[data-focus-key]");
+      const own  = active.dataset ? active.dataset.focus : null;
+      if(item || own){
+        sel = (item ? `[data-focus-key="${CSS.escape(item.dataset.focusKey)}"] ` : "")
+            + (own ? `[data-focus="${CSS.escape(own)}"]` : "");
+        sel = sel.trim();
+      }
+      if(active.selectionStart != null) scrollTop = active.selectionStart;
+    }
+    run();
+    if(!sel) return;
+    const next = container.querySelector(sel);
+    if(!next) return;
+    next.focus({ preventScroll: true });
+    /* Restore the caret so a re-render mid-typing does not send it to position 0. */
+    try{ if(next.selectionStart != null) next.setSelectionRange(scrollTop, scrollTop); }catch(e){}
   }
 
   function esc(s){
@@ -1784,10 +1975,10 @@
     { key:"squat",    name:"Barbell Back Squat",  cat:"legs", entries:[] }
   ];
 
-  let settings = Object.assign({}, DEFAULT_SETTINGS, load(KEY.settings, {}));
-  let profile  = Object.assign({}, DEFAULT_PROFILE,  load(KEY.profile, {}));
-  let history  = load(KEY.history, []);
-  let lifts    = load(KEY.prs, null);
+  let settings = Object.assign({}, DEFAULT_SETTINGS, definedOnly(load(KEY.settings, {}, isObj)));
+  let profile  = Object.assign({}, DEFAULT_PROFILE,  definedOnly(load(KEY.profile, {}, isObj)));
+  let history  = load(KEY.history, [], arrOfObj);
+  let lifts    = load(KEY.prs, null, arrOfObj);
   if(!Array.isArray(lifts)) lifts = JSON.parse(JSON.stringify(DEFAULT_LIFTS));
 
   let activeCat = null;
@@ -1801,14 +1992,16 @@
   let calCursor = new Date();
   let selectedDay = todayStr();
 
-  let splitEdits  = load(KEY.splits, {});
-  if(!splitEdits || typeof splitEdits !== "object") splitEdits = {};
-  let activeSplit = load(KEY.activeSplit, "ppl");
+  /* Each value is a list of days, each day {name, ex:[...]}; a day without ex
+     used to throw in renderSplitLoader. */
+  const isSplitEdit = v => isObj(v) && Object.keys(v).every(k =>
+    Array.isArray(v[k]) && v[k].every(d => isObj(d) && Array.isArray(d.ex)));
+  let splitEdits  = load(KEY.splits, {}, isSplitEdit);
+  let activeSplit = load(KEY.activeSplit, "ppl", v => typeof v === "string");
   let pickerFor = null;   // {dayIdx, exIdx|null} — an open swap/add picker
 
   /* ---- Exercises the user added themselves ---- */
-  let customEx = load(KEY.customEx, []);
-  if(!Array.isArray(customEx)) customEx = [];
+  let customEx = load(KEY.customEx, [], arrOfObj);
 
   function slug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "x"; }
 
@@ -1825,7 +2018,7 @@
   mountCustomEx();
 
   /* ---- Splits the user built themselves ---- */
-  let customSplits = load(KEY.customSplits, []);
+  let customSplits = load(KEY.customSplits, [], arrOfObj);
   if(!Array.isArray(customSplits)) customSplits = [];
   function persistCustomSplits(){ save(KEY.customSplits, customSplits); }
   function allSplits(){ return SPLITS.concat(customSplits); }
@@ -1876,11 +2069,16 @@
         sets, setLog,
         expanded: !!it.expanded,
         restSeconds: parseInt(it.restSeconds,10) || 0,
-        supersetId: it.supersetId || null
+        supersetId: it.supersetId || null,
+        /* sets parked by a lowered set count, so a reload does not lose them */
+        trimmed: Array.isArray(it.trimmed)
+          ? it.trimmed.filter(x=> x && typeof x === "object")
+              .map(x=>({ reps:x.reps || "", weight:x.weight || "", done:!!x.done }))
+          : []
       };
     });
   }
-  tray = normalizeTray(load(KEY.tray, []));
+  tray = normalizeTray(load(KEY.tray, [], arrOfObj));
 
   function persistTray(){ save(KEY.tray, tray); }
 
@@ -1894,9 +2092,10 @@
       try{ localStorage.removeItem(KEY.theme); }catch(e){}
     }
     document.querySelectorAll("#themeSeg button").forEach(b=>
-      b.classList.toggle("active", b.dataset.themeChoice === (choice || "system")));
+      {const on = b.dataset.themeChoice === (choice || "system");
+       b.classList.toggle("active", on); b.setAttribute("aria-pressed", String(on));});
   }
-  applyTheme(load(KEY.theme, "system"));
+  applyTheme(load(KEY.theme, "system", v => v === "light" || v === "dark" || v === "system"));
   document.querySelectorAll("#themeSeg button").forEach(btn=>{
     btn.addEventListener("click", ()=> applyTheme(btn.dataset.themeChoice));
   });
@@ -1930,10 +2129,22 @@
     }
   });
   document.addEventListener("keydown", (e)=>{
-    if(e.key === "Escape" && acctMenu.classList.contains("open")){
+    if(e.key !== "Escape") return;
+    if(acctMenu.classList.contains("open")){
       acctMenu.classList.remove("open");
       avatarBtn.setAttribute("aria-expanded","false");
       avatarBtn.focus();
+      return;
+    }
+    /* The tray's ⋯ popover could only be dismissed by clicking outside it, which
+       a keyboard user cannot do — so opening the rest-timer menu was a one-way
+       door. Close it here and put focus back where it came from. */
+    if(openMenuFor){
+      const id = openMenuFor;
+      openMenuFor = null;
+      renderTray();
+      const btn = document.querySelector(`.tray-item[data-id="${id}"] .ellipsis`);
+      if(btn) btn.focus();
     }
   });
   acctMenu.querySelectorAll("button[data-go]").forEach(btn=>{
@@ -1950,7 +2161,13 @@
     document.querySelectorAll(".view").forEach(v=> v.classList.remove("active"));
     const el = document.getElementById("view-" + view);
     if(el) el.classList.add("active");
-    document.querySelectorAll(".viewtab").forEach(t=> t.classList.toggle("active", t.dataset.view === view));
+    /* Which of six views you are in was conveyed by colour alone. These swap
+       in-page sections inside a <nav>, so aria-current is the right word for it. */
+    document.querySelectorAll(".viewtab").forEach(t=>{
+      const on = t.dataset.view === view;
+      t.classList.toggle("active", on);
+      if(on) t.setAttribute("aria-current", "page"); else t.removeAttribute("aria-current");
+    });
 
     const showTray = (view === "train");
     document.getElementById("trayPanel").style.display = showTray ? "flex" : "none";
@@ -1972,33 +2189,37 @@
   const tilesEl = document.getElementById("tiles");
   const allPill = document.getElementById("allPill");
 
-  function renderTiles(){
+  function renderTiles__body(){
     tilesEl.innerHTML = "";
     CAT_ORDER.forEach(cat=>{
       const count = EX.filter(e=>e.cat===cat).length;
       const tile = document.createElement("button");
       tile.type = "button";
       tile.className = "tile" + (activeCat===cat ? " active" : "");
+      tile.setAttribute("aria-pressed", String(activeCat===cat));
       tile.dataset.cat = cat;
+      tile.dataset.focus = "cat-" + cat;
       tile.innerHTML = `<span class="ring"></span><span class="label">${CAT_LABEL[cat]}</span><span class="sub"><span class="sub-groups">${CAT_SUB[cat]} · </span>${count}</span>`;
       tile.addEventListener("click", ()=>{
         activeCat = (activeCat === cat) ? null : cat;
         activeGroup = null;            // a new category starts on all of its groups
         allPill.classList.toggle("active", activeCat===null);
+        allPill.setAttribute("aria-pressed", String(activeCat===null));
         renderTiles(); renderSubgroups(); renderGroups();
       });
       tilesEl.appendChild(tile);
     });
   }
   allPill.addEventListener("click", ()=>{
-    activeCat = null; activeGroup = null; allPill.classList.add("active");
+    activeCat = null; activeGroup = null;
+    allPill.classList.add("active"); allPill.setAttribute("aria-pressed", "true");
     renderTiles(); renderSubgroups(); renderGroups();
   });
 
   /* Pick a category and you get all of its muscle groups, as before. The chips
      let you narrow to one — triceps without the chest and shoulders. */
   const subgroupsEl = document.getElementById("subgroups");
-  function renderSubgroups(){
+  function renderSubgroups__body(){
     if(!activeCat){ subgroupsEl.hidden = true; subgroupsEl.innerHTML = ""; return; }
     const inCat = EX.filter(e=>e.cat===activeCat);
     const groups = [...new Set(inCat.map(e=>e.g))];
@@ -2008,11 +2229,11 @@
     subgroupsEl.style.setProperty("--cat-color", `var(--${activeCat})`);
     subgroupsEl.style.setProperty("--cat-ink", `var(--on-${activeCat})`);
     subgroupsEl.innerHTML =
-      `<button type="button" class="sg-chip${activeGroup===null?" on":""}" data-g="">`
+      `<button type="button" class="sg-chip${activeGroup===null?" on":""}" data-g="" data-focus="sg-all" aria-pressed="${activeGroup===null}">`
       + `All ${CAT_LABEL[activeCat]}<span class="sg-n">${inCat.length}</span></button>`
       + groups.map(g=>{
           const n = inCat.filter(e=>e.g===g).length;
-          return `<button type="button" class="sg-chip${activeGroup===g?" on":""}" data-g="${esc(g)}">`
+          return `<button type="button" class="sg-chip${activeGroup===g?" on":""}" data-g="${esc(g)}" data-focus="sg-${esc(g)}" aria-pressed="${activeGroup===g}">`
                + `${esc(g)}<span class="sg-n">${n}</span></button>`;
         }).join("");
 
@@ -2044,7 +2265,7 @@
   });
 
   const groupsEl = document.getElementById("groups");
-  function renderGroups(){
+  function renderGroups__body(){
     groupsEl.innerHTML = "";
     const cats = activeCat ? [activeCat] : CAT_ORDER;
     let anyResults = false;
@@ -2064,6 +2285,7 @@
         group.className = "group";
         group.style.setProperty("--group-color", `var(--${cat})`);
         group.style.setProperty("--group-ink", `var(--on-${cat})`);
+        group.style.setProperty("--group-text", `var(--${cat}-ink)`);
         group.innerHTML = `<div class="group-head"><h3>${CAT_LABEL[cat]} — ${esc(sg)}</h3><span class="n">${items.length}</span></div>`;
 
         const wrap = document.createElement("div");
@@ -2085,7 +2307,9 @@
               </div>
             </div>
             ${ex.custom ? `<button type="button" class="del-custom" aria-label="Delete ${esc(ex.n)}">×</button>` : ""}
-            <button type="button" class="add-btn${inTray ? " added" : ""}" aria-label="Add ${esc(ex.n)} to workout">${inTray ? "✓" : "+"}</button>`;
+            <button type="button" class="add-btn${inTray ? " added" : ""}" aria-pressed="${inTray}"
+                  data-focus="add-${esc(ex.id)}"
+                  aria-label="${inTray ? "Remove" : "Add"} ${esc(ex.n)} ${inTray ? "from" : "to"} your workout">${inTray ? "✓" : "+"}</button>`;
           card.querySelector(".add-btn").addEventListener("click", ()=> toggleTray(ex));
           const del = card.querySelector(".del-custom");
           if(del) del.addEventListener("click", ()=> deleteCustomExercise(ex));
@@ -2124,6 +2348,7 @@
 
   function openNewEx(open){
     newExPanel.hidden = !open;
+    document.getElementById("newExBtn").setAttribute("aria-expanded", String(!!open));
     if(open){
       document.getElementById("nxCat").value = activeCat || "push";
       document.getElementById("nxName").focus();
@@ -2234,11 +2459,20 @@
   function resizeSetLog(item, count){
     count = Math.max(1, Math.min(20, count || 1));
     const log = item.setLog || [];
+    /* Trimmed sets are parked rather than dropped. Typing 2 over a 5 used to
+       destroy three logged sets outright, and typing 5 again then invented three
+       the user never performed by copying the last one forward — ready to be
+       logged into history as fact. */
+    item.trimmed = Array.isArray(item.trimmed) ? item.trimmed : [];
+    while(log.length > count) item.trimmed.unshift(log.pop());
     while(log.length < count){
-      const seed = [...log].reverse().find(s=> s.reps || s.weight) || {reps:"", weight:""};
-      log.push({ reps: seed.reps, weight: seed.weight, done:false });
+      const restored = item.trimmed.shift();
+      if(restored){ log.push(restored); continue; }
+      /* Nothing parked to restore: a genuinely new set starts blank. Seeding it
+         from the previous set is carryForward's job, on an explicit action. */
+      log.push({ reps:"", weight:"", done:false });
     }
-    while(log.length > count) log.pop();
+    item.trimmed = item.trimmed.slice(0, 20);
     item.sets = count; item.setLog = log;
   }
   function startRestTimer(item){
@@ -2283,7 +2517,7 @@
   const trayCountEl = document.getElementById("trayCount");
   const PRESET_SECS = [30,45,60,90,120];
 
-  function renderTray(){
+  function renderTray__body(){
     trayCountEl.textContent = tray.length;
     renderSessionHeader();
     syncTrayFab();
@@ -2294,6 +2528,8 @@
     tray.forEach((item)=>{
       const row = document.createElement("div");
       row.className = "tray-item";
+      row.dataset.id = item.id;
+      row.dataset.focusKey = item.id;
       row.style.setProperty("--item-color", `var(--${item.cat})`);
       row.style.setProperty("--item-ink", `var(--on-${item.cat})`);
 
@@ -2326,7 +2562,8 @@
                      placeholder="${esc((lt && lt.sets[si] && lt.sets[si].reps) || "—")}"
                      value="${esc(s.reps)}" aria-label="Set ${si+1} reps">
               <label class="check-wrap">
-                <input type="checkbox" data-idx="${si}" ${s.done ? "checked" : ""}>
+                <input type="checkbox" data-idx="${si}" data-focus="done-${si}" ${s.done ? "checked" : ""}
+                       aria-label="Set ${si+1} of ${esc(item.n)} complete">
                 <span class="checkmark" aria-hidden="true"></span>
               </label>
             </div>`).join("")}
@@ -2341,8 +2578,8 @@
         : `<div class="menu-empty">Add another exercise to superset with</div>`;
 
       const isPreset = PRESET_SECS.includes(item.restSeconds);
-      const chips = PRESET_SECS.map(s=>`<button type="button" class="timer-chip${item.restSeconds===s?" active":""}" data-sec="${s}">${formatTime(s)}</button>`).join("")
-        + `<button type="button" class="timer-chip${item.restSeconds===0?" active":""}" data-sec="0">None</button>`;
+      const chips = PRESET_SECS.map(s=>`<button type="button" class="timer-chip${item.restSeconds===s?" active":""}" data-sec="${s}" aria-pressed="${item.restSeconds===s}">${formatTime(s)}</button>`).join("")
+        + `<button type="button" class="timer-chip${item.restSeconds===0?" active":""}" data-sec="0" aria-pressed="${item.restSeconds===0}">None</button>`;
 
       const menu = openMenuFor === item.id ? `
         <div class="menu-popover">
@@ -2369,8 +2606,11 @@
           </div>
           <div class="head-right">
             <label class="sets-field">Sets<input type="number" min="1" max="20" class="sets-input" value="${item.sets}"></label>
-            <button type="button" class="icon-btn ellipsis" aria-label="More options for ${esc(item.n)}">⋯</button>
-            <button type="button" class="icon-btn expand-btn" aria-label="${item.expanded?"Collapse":"Expand"} ${esc(item.n)} sets">${item.expanded?"–":"+"}</button>
+            <button type="button" class="icon-btn ellipsis" data-focus="menu" aria-haspopup="true"
+                    aria-expanded="${openMenuFor === item.id}"
+                    aria-label="More options for ${esc(item.n)}">⋯</button>
+            <button type="button" class="icon-btn expand-btn" data-focus="expand" aria-expanded="${item.expanded}"
+                    aria-label="${item.expanded?"Collapse":"Expand"} ${esc(item.n)} sets">${item.expanded?"–":"+"}</button>
             <button type="button" class="icon-btn rm" aria-label="Remove ${esc(item.n)}">×</button>
           </div>
         </div>
@@ -2396,18 +2636,38 @@
         if(openMenuFor === item.id) openMenuFor = null;
         persistTray(); renderTray(); renderGroups();
       });
-      row.querySelectorAll(".weight-input").forEach(inp=>{
-        inp.addEventListener("input", ()=>{
-          item.setLog[parseInt(inp.dataset.idx,10)].weight = inp.value;
-          persistTray();
+      /* Typing is left alone — correcting a value mid-keystroke fights the user —
+         but what gets committed on blur is normalised. Without this the field
+         accepted "1e5" and "-5", stored them raw, showed them in the calendar,
+         and then the share encoder's digit filter turned them into 15 and 5: the
+         readable half of a shared message and its machine-readable half
+         disagreed, and only the wrong half was parsed. */
+      const normNum = (v, max)=>{
+        const t = String(v).trim().replace(/,/g, ".");
+        if(t === "") return "";
+        /* Full match only. Extracting the first number instead would turn "1e5"
+           into 1 and "-5" into 5 — quietly recording something the user did not
+           type, which is worse than clearing a field they can see is empty. */
+        if(!/^\d{1,6}(?:\.\d{1,2})?$/.test(t)) return "";
+        const n = parseFloat(t);
+        if(!isFinite(n) || n <= 0 || n > max) return "";
+        return String(Math.round(n * 100) / 100);
+      };
+      const bindNum = (sel, field, max)=>{
+        row.querySelectorAll(sel).forEach(inp=>{
+          inp.addEventListener("input", ()=>{
+            item.setLog[parseInt(inp.dataset.idx,10)][field] = inp.value;
+            persistTray();
+          });
+          inp.addEventListener("blur", ()=>{
+            const idx = parseInt(inp.dataset.idx,10);
+            const clean = normNum(inp.value, max);
+            if(clean !== inp.value){ inp.value = clean; item.setLog[idx][field] = clean; persistTray(); }
+          });
         });
-      });
-      row.querySelectorAll(".reps-input").forEach(inp=>{
-        inp.addEventListener("input", ()=>{
-          item.setLog[parseInt(inp.dataset.idx,10)].reps = inp.value;
-          persistTray();
-        });
-      });
+      };
+      bindNum(".weight-input", "weight", 2000);
+      bindNum(".reps-input", "reps", 200);
       row.querySelectorAll(".set-row input[type=checkbox]").forEach(cb=>{
         cb.addEventListener("change", ()=>{
           const idx = parseInt(cb.dataset.idx,10);
@@ -2489,7 +2749,8 @@
     trainView.setAttribute("data-mode", trainMode);
     document.getElementById("layout").classList.toggle("browse-mode", trainMode === "browse");
     document.querySelectorAll("#modeSwitch button").forEach(b=>
-      b.classList.toggle("on", b.dataset.mode === trainMode));
+      {const on = b.dataset.mode === trainMode;
+       b.classList.toggle("on", on); b.setAttribute("aria-pressed", String(on));});
     syncTrayFab();
     window.scrollTo({ top: 0, behavior: "instant" });
   }
@@ -2585,7 +2846,7 @@
       `${def.freq} · ${def.goal}. One tap loads a day into your workout tray.` + (isEdited(activeSplit) ? " (edited)" : "");
     splitRow.innerHTML = days.map((d,i)=>{
       const cat = dominantCat(d.ex);
-      return `<button class="split-btn" data-dayidx="${i}" style="--dot-color: var(--${cat})">
+      return `<button type="button" class="split-btn" data-dayidx="${i}" style="--dot-color: var(--${cat})">
         <span class="dot" style="background: var(--${cat})"></span>${esc(d.name)}</button>`;
     }).join("");
     splitRow.querySelectorAll(".split-btn").forEach(btn=>{
@@ -2637,7 +2898,7 @@
       const days = splitDays(s.key);
       const mix = catMix(days);
       const isActive = s.key === activeSplit;
-      return `<button type="button" class="split-tile${isActive?" active":""}" data-key="${s.key}">
+      return `<button type="button" class="split-tile${isActive?" active":""}" data-key="${s.key}" aria-pressed="${isActive}">
         <span class="st-top">
           <span class="st-name">${esc(s.name)}</span>
           ${isActive ? `<span class="st-active">Active</span>` : (isEdited(s.key) ? `<span class="st-edited">Edited</span>` : "")}
@@ -2863,7 +3124,28 @@
       }))
     };
     const existing = history.findIndex(h=>h.date===date);
-    if(existing > -1) history[existing] = session; else history.push(session);
+    let merged = 0;
+    if(existing > -1){
+      /* Two-a-days are normal, and clearOnLog empties the tray after the first —
+         so the evening tray holds only the evening work. Replacing the day's
+         entry threw the morning session away behind a toast that read like
+         success. Same exercise twice in a day appends its sets. */
+      const day = history[existing];
+      if(!Array.isArray(day.items)) day.items = [];
+      session.items.forEach(item=>{
+        const prev = day.items.find(p=> p.id === item.id);
+        if(prev){
+          prev.setLog = (Array.isArray(prev.setLog) ? prev.setLog : []).concat(item.setLog);
+          prev.sets = prev.setLog.length;
+        } else {
+          day.items.push(item);
+        }
+        merged++;
+      });
+      day.loggedAt = session.loggedAt;
+    } else {
+      history.push(session);
+    }
     history.sort((a,b)=> a.date < b.date ? 1 : -1);
     save(KEY.history, history);
 
@@ -2875,7 +3157,9 @@
     }
     persistTray(); renderTray(); renderGroups();
     selectedDay = date;
-    showToast(existing > -1 ? "Today's session updated" : "Session logged to today");
+    showToast(existing > -1
+      ? "Added " + merged + " exercise" + (merged===1?"":"s") + " to today's session"
+      : "Session logged to today");
   });
 
   /* ================= Calendar ================= */
@@ -2924,7 +3208,7 @@
       `<div class="stat-tile"><div class="k">${t.k}</div><div class="v">${t.v}</div><div class="u">${t.u}</div></div>`).join("");
   }
 
-  function renderCalendar(){
+  function renderCalendar__body(){
     const y = calCursor.getFullYear(), m = calCursor.getMonth();
     calTitle.textContent = calCursor.toLocaleDateString(undefined,{month:"long", year:"numeric"});
 
@@ -2944,12 +3228,14 @@
       const ds = ymd(new Date(y, m, day));
       const sess = sessionFor(ds);
       const cats = sess ? [...new Set(sess.items.map(i=>i.cat))].sort((a,b)=>CAT_ORDER.indexOf(a)-CAT_ORDER.indexOf(b)) : [];
-      const dots = cats.map(c=>`<span style="background:var(--${c})" title="${CAT_LABEL[c]}"></span>`).join("");
+      const dots = cats.map(c=>`<span data-cat="${c}" style="background:var(--${c})" title="${CAT_LABEL[c]}"></span>`).join("");
       const cls = ["cal-cell"];
       if(sess) cls.push("has-session");
       if(ds === today) cls.push("today");
       if(ds === selectedDay) cls.push("selected");
-      html += `<button type="button" class="${cls.join(" ")}" data-date="${ds}" aria-label="${prettyDate(ds)}${sess ? ", session logged" : ""}">
+      html += `<button type="button" class="${cls.join(" ")}" data-date="${ds}" data-focus="day-${ds}"
+        aria-pressed="${ds === selectedDay}"${ds === today ? ' aria-current="date"' : ""}
+        aria-label="${prettyDate(ds)}${sess ? ", session logged" : ""}">
         <span class="dnum">${day}</span><span class="cal-dots">${dots}</span></button>`;
     }
     calGrid.innerHTML = html;
@@ -3135,6 +3421,7 @@
       card.className = "pr-card";
       card.style.setProperty("--lift-color", `var(--${lift.cat})`);
       card.style.setProperty("--lift-ink", `var(--on-${lift.cat})`);
+      card.style.setProperty("--lift-text", `var(--${lift.cat}-ink)`);
       card.innerHTML = `
         <div class="pr-head">
           <div>
@@ -3212,8 +3499,15 @@
         const w = parseFloat(card.querySelector(".in-weight").value);
         const r = parseInt(card.querySelector(".in-reps").value,10);
         const d = card.querySelector(".in-date").value || todayStr();
+        /* min/max on the inputs are HTML-only and this handler ignored them, so
+           100kg x 999 reps was accepted and Epley turned it into a 3430kg "best"
+           that flattened the chart and could only be undone by deleting it. Epley
+           is not meaningful past about 10 reps anyway. */
         if(!isFinite(w) || w<=0){ showToast("Enter a weight above zero"); return; }
         if(!isFinite(r) || r<1){ showToast("Enter at least 1 rep"); return; }
+        if(w > 2000){ showToast("That weight looks like a typo"); return; }
+        if(r > 30){ showToast("Estimated 1RM stops being meaningful past 30 reps"); return; }
+        if(d > todayStr()){ showToast("That date is in the future"); return; }
         const prevBest = best ? est1RM(best.weight,best.reps) : 0;
         lift.entries.push({date:d, weight:w, reps:r});
         persistLifts(); renderRecords();
@@ -3409,15 +3703,22 @@
      sends an INDEX into it rather than the exercise name, equipment and category —
      which is what made the old base64-JSON codes enormous. Grammar:
 
-       PTP2~W~<name>~<item>!<item>…                       one workout
-       PTP2~L~<name>~<YYYYMMDD>~<off>=<items>;<off>=<items>…   a training log
+       PTP2~W<u>~<name>~<item>!<item>…                          one workout
+       PTP2~L<u>~<name>~<YYYYMMDD>~<off>=<items>;<off>=<items>…  a training log
 
+       <u>    unit the weights are in: "k" kg, "l" lb. Absent on codes written
+              before units were carried — those read as kg, which is what they
+              meant, and the reader converts to whichever unit it is set to.
        item = <ref><mode><body>[+<letter>]
-         ref   base36 catalogue index, or "?" + base64url(name) if not in the catalogue
+         ref   base36 catalogue index, or "?" + base64url(payload) if not in the
+               catalogue. payload is "<name>" or "<name>\u001f<cat>\u001e<equipment>";
+               the two-field form was added later, so the bare name still reads.
          mode  "*" body is a set count      → "5*3"     3 sets, no reps recorded
-               ":" body is "-"-joined reps  → "5:8-8-6" 3 sets of 8, 8, 6 (blank = "")
-         +A    superset group letter
-       off    days after the start date, base36
+               ":" body is "-"-joined sets  → "5:80x8-80x8-70x6", or a bare rep
+                   count when no weight was recorded (blank = "")
+         +A    superset group letter, scoped to this message — the reader assigns
+               its own ids, so two imports never merge into one group
+       off    days after the start date, base36, 0…3650
        name   base64url of the sharer's name, empty when unset
 
      Every separator (~ ! * : + = ; ?) is outside the base64url alphabet, so an
@@ -3479,7 +3780,8 @@
   function encodeItems(items, ssLetters){
     return items.map(i=>{
       const idx = EX_INDEX.has(i.n) ? EX_INDEX.get(i.n) : -1;
-      const ref = idx >= 0 ? idx.toString(36) : "?" + b64urlEncode(i.n);
+      const ref = idx >= 0 ? idx.toString(36)
+        : "?" + b64urlEncode(i.n + "\u001f" + (i.cat || "push") + "\u001e" + (i.eq || ""));
       /* "-" separates sets and "x" separates weight from reps, so neither may
          appear inside a value. A set is "80x8", or plain "8" when only reps are
          recorded — which keeps codes shared before weight existed readable. */
@@ -3496,8 +3798,15 @@
     }).join("!");
   }
 
+  /* The kind field carries the sharer's unit as a second letter: "Wk"/"Wl",
+     "Lk"/"Ll". A bare "W"/"L" is a code written before this existed and is read
+     as kg, which is what those codes meant. Without it a 225lb bench arrived as
+     225kg — a 2.2x inflation that then flowed into the receiver's calendar and
+     personal records as if they had lifted it. */
+  function unitLetter(){ return unit() === "lb" ? "l" : "k"; }
+
   function encodeWorkout(items, name, ssLetters){
-    return SHARE_MARK + "W~" + (name ? b64urlEncode(name) : "") + "~" + encodeItems(items, ssLetters);
+    return SHARE_MARK + "W" + unitLetter() + "~" + (name ? b64urlEncode(name) : "") + "~" + encodeItems(items, ssLetters);
   }
 
   function encodeLog(sessions, name){
@@ -3506,8 +3815,26 @@
       const off = Math.round((fromYmd(s.date) - fromYmd(start)) / 86400000);
       return off.toString(36) + "=" + encodeItems(s.items, null);
     });
-    return SHARE_MARK + "L~" + (name ? b64urlEncode(name) : "") + "~" +
+    return SHARE_MARK + "L" + unitLetter() + "~" + (name ? b64urlEncode(name) : "") + "~" +
            start.replace(/-/g,"") + "~" + days.join(";");
+  }
+
+  /* Weights in a shared code are numbers in the sharer's unit. Bring them into
+     the reader's unit so the same barbell means the same thing on both phones. */
+  const KG_PER_LB = 0.45359237;
+  function convertWeight(v, from, to){
+    if(from === to) return v;
+    const n = parseFloat(v);
+    if(!isFinite(n) || n <= 0) return v;
+    const kg = from === "lb" ? n * KG_PER_LB : n;
+    const out = to === "lb" ? kg / KG_PER_LB : kg;
+    return String(Math.round(out * 2) / 2);   // nearest half unit, the plate granularity
+  }
+  function convertItems(items, from){
+    const to = unit();
+    if(from === to) return items;
+    items.forEach(i=>{ if(Array.isArray(i.w)) i.w = i.w.map(v=> convertWeight(v, from, to)); });
+    return items;
   }
 
   /* ---- compact code: decode (produces the same shape the JSON payloads used) ---- */
@@ -3526,7 +3853,20 @@
 
       let base;
       if(ref.charAt(0) === "?"){
-        base = { n: b64urlDecode(ref.slice(1)), c:"push", e:"" };
+        /* "?<name>" or "?<name>.<cat><equipment>" — the trailing part was added
+           later, so a code without it still reads. Landing every custom exercise
+           in Push was wrong on the receiver's calendar dots, day colours and
+           category totals. */
+        const payload = b64urlDecode(ref.slice(1));
+        const bar = payload.indexOf("\u001f");
+        if(bar > -1){
+          const meta = payload.slice(bar+1).split("\u001e");
+          base = { n: payload.slice(0,bar),
+                   c: CAT_ORDER.includes(meta[0]) ? meta[0] : "push",
+                   e: meta[1] || "" };
+        } else {
+          base = { n: payload, c:"push", e:"" };
+        }
       } else {
         const idx = parseInt(ref, 36);
         const ex = (idx >= 0 && idx < BUILTIN_EX_COUNT) ? EX[idx] : null;
@@ -3554,13 +3894,17 @@
 
   function decodeCompact(code){
     const parts = code.slice(SHARE_MARK.length).split("~");
-    const kind = parts[0];
+    const kindField = parts[0] || "";
+    const kind = kindField.charAt(0);
+    /* No unit letter means a code from before units were carried; those were all
+       written in the sharer's own numbers with kg as the app default. */
+    const from = kindField.charAt(1) === "l" ? "lb" : "kg";
     const by = parts[1] ? b64urlDecode(parts[1]) : "A Push to Play user";
 
     if(kind === "W"){
-      const ex = decodeItems(parts[2] || "");
+      const ex = convertItems(decodeItems(parts[2] || ""), from);
       if(!ex.length) throw new Error("empty");
-      return { v:1, k:"w", by, ex };
+      return { v:1, k:"w", by, from, ex };
     }
     if(kind === "L"){
       const start = parts[2] || "";
@@ -3570,13 +3914,20 @@
         const eq = chunk.indexOf("=");
         if(eq < 0) throw new Error("bad day");
         const off = parseInt(chunk.slice(0, eq), 36);
-        if(!isFinite(off)) throw new Error("bad offset");
+        /* isFinite alone let "zzzzzzzz" through as a huge finite number, which
+           overflowed setDate into an Invalid Date and wrote a "NaN-NaN-NaN"
+           session into history — on no calendar month, in no stat, and impossible
+           to delete because the delete button keys off a real date string. */
+        if(!(off >= 0 && off <= 3650)) throw new Error("bad offset");
         const d = fromYmd(startYmd);
         d.setDate(d.getDate() + off);
-        return { d: ymd(d), ex: decodeItems(chunk.slice(eq+1)) };
+        const dateStr = ymd(d);
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) throw new Error("bad date");
+        return { d: dateStr, ex: decodeItems(chunk.slice(eq+1)) };
       }).filter(s=> s.ex.length);
       if(!se.length) throw new Error("empty");
-      return { v:1, k:"l", by, f: se[0].d, t: se[se.length-1].d, se };
+      se.forEach(day=>{ day.ex = convertItems(day.ex, from); });
+      return { v:1, k:"l", by, from, f: se[0].d, t: se[se.length-1].d, se };
     }
     throw new Error("unknown kind");
   }
@@ -3685,7 +4036,8 @@
   document.querySelectorAll("#shareScope button").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       shareScope = btn.dataset.scope;
-      document.querySelectorAll("#shareScope button").forEach(b=> b.classList.toggle("active", b===btn));
+      document.querySelectorAll("#shareScope button").forEach(b=>{
+        b.classList.toggle("active", b===btn); b.setAttribute("aria-pressed", String(b===btn)); });
       document.getElementById("rangeControls").hidden = (shareScope !== "range");
       if(shareScope === "range" && !shareFrom.value) setRangeDays(30);
       renderShare();
@@ -3813,15 +4165,33 @@
   }
 
   function loadIntoTray(items, label){
-    let added = 0;
+    let added = 0, filled = 0;
+    /* One import's superset letters must not join that import's groups to a
+       previous one's: the wire letter is scoped to the message, the id is not. */
+    const ssMap = {};
+    const localSs = w => w ? (ssMap[w] || (ssMap[w] = "ss-" + Math.random().toString(36).slice(2,8))) : null;
+
     items.forEach(i=>{
-      if(tray.some(t=>t.id === i.id)) return;
+      const sets = i.setLog.map(s=>({reps:s.reps, weight:s.weight || "", done:false}));
+      const existing = tray.find(t=>t.id === i.id);
+      if(existing){
+        /* Skipping meant the shared loads for an exercise the user had already
+           queued were dropped, while the toast still counted it as a full load.
+           A blank placeholder takes the shared numbers; real work is kept. */
+        const hasWork = existing.setLog.some(s=> s.reps || s.weight || s.done);
+        if(!hasWork){
+          existing.setLog = sets;
+          existing.sets = sets.length;
+          filled++;
+        }
+        return;
+      }
       tray.push({
         id:i.id, n:i.n, cat:i.cat, eq:i.eq, sets:i.sets,
-        setLog: i.setLog.map(s=>({reps:s.reps, weight:s.weight || "", done:false})),
+        setLog: sets,
         expanded:false,
         restSeconds: parseInt(settings.defaultRest,10) || 0,
-        supersetId: i.supersetId || null
+        supersetId: localSs(i.supersetId)
       });
       added++;
     });
@@ -3829,7 +4199,12 @@
     setView("train");
     /* an imported or reloaded session should land on the workout, not the directory */
     setTrainMode("workout");
-    showToast(added ? `${label} loaded — ${added} exercise${added>1?"s":""} added` : "Those exercises are already in your tray");
+    const parts = [];
+    if(added)  parts.push(`${added} added`);
+    if(filled) parts.push(`${filled} updated`);
+    const skipped = items.length - added - filled;
+    if(skipped) parts.push(`${skipped} already logged`);
+    showToast(parts.length ? `${label} loaded — ${parts.join(", ")}` : "Nothing to load");
   }
 
   function renderImport(res){
@@ -3890,7 +4265,9 @@
       sessions.forEach(s=>{
         const session = { date:s.date, loggedAt:new Date().toISOString(), importedFrom: d.by || "shared",
           items: s.items.map(i=>({ id:i.id, n:i.n, cat:i.cat, eq:i.eq, sets:i.sets,
-            setLog: i.setLog.map(x=>({reps:x.reps, done:false})) })) };
+            /* weight belongs here too — omitting it turned an imported training
+               block into a reps-only one, permanently. */
+            setLog: i.setLog.map(x=>({reps:x.reps, weight:x.weight || "", done:false})) })) };
         const at = history.findIndex(h=>h.date===s.date);
         if(at>-1) history[at] = session; else history.push(session);
       });
@@ -4014,18 +4391,41 @@
   installBtn.addEventListener("click", async ()=>{
     if(!deferredInstall) return;
     deferredInstall.prompt();
+    let accepted = false;
     try{
       const { outcome } = await deferredInstall.userChoice;
-      if(outcome !== "accepted") showToast("Install cancelled");
+      accepted = outcome === "accepted";
+      if(!accepted) showToast("Install cancelled");
     }catch(e){ /* the browser dismissed it */ }
-    deferredInstall = null;
-    refreshInstallCard();
+    /* Only spend the event when it was actually used. Clearing it on a dismissal
+       hid the whole install card, so changing your mind meant reloading the app
+       to get the button back. */
+    if(accepted){
+      deferredInstall = null;
+      refreshInstallCard();
+    }
   });
 
   /* Service worker: only over https or localhost, and never from file:// */
   if("serviceWorker" in navigator && location.protocol.startsWith("http")){
     window.addEventListener("load", ()=>{
-      navigator.serviceWorker.register("sw.js").catch(()=>{ /* offline support is optional */ });
+      navigator.serviceWorker.register("sw.js").then((reg)=>{
+        /* Without this a long-lived standalone session keeps running the code it
+           launched with — the new worker installs and claims the page, but the
+           already-parsed script stays as it was, with nothing on screen to say so. */
+        reg.addEventListener("updatefound", ()=>{
+          const fresh = reg.installing;
+          if(!fresh) return;
+          fresh.addEventListener("statechange", ()=>{
+            if(fresh.state === "installed" && navigator.serviceWorker.controller){
+              const banner = document.getElementById("updateWarn");
+              if(banner) banner.hidden = false;
+            }
+          });
+        });
+      }).catch(()=>{ /* offline support is optional */ });
+      const reloadBtn = document.getElementById("updateReload");
+      if(reloadBtn) reloadBtn.addEventListener("click", ()=> location.reload());
     });
   }
 
@@ -4039,10 +4439,34 @@
     toastTimer = setTimeout(()=> t.classList.remove("show"), 1900);
   }
 
-  /* ================= Init ================= */
-  renderIdentity();
-  refreshExerciseLists();
-  setTrainMode(tray.length ? "workout" : "browse");
+  /* Focus-preserving wrappers. Each renderer replaces its container wholesale;
+     keepFocus records which control had focus and re-focuses its counterpart in
+     the new DOM. Declared as functions so hoisting keeps every existing call
+     site — including ones above this point — working unchanged. */
+  function renderTiles(){     keepFocus(tilesEl,     renderTiles__body); }
+  function renderSubgroups(){ keepFocus(subgroupsEl, renderSubgroups__body); }
+  function renderGroups(){    keepFocus(groupsEl,    renderGroups__body); }
+  function renderTray(){      keepFocus(trayListEl,  renderTray__body); }
+  function renderCalendar(){  keepFocus(calGrid,     renderCalendar__body); }
+
+  /* ================= Init =================
+     Each step is guarded on its own. A render that throws on damaged data used to
+     abort the whole block, and because the tab wiring lives in here, that left an
+     app whose navigation did nothing — so Settings → Reset, the only in-app way to
+     clear the bad data, could not be reached. Now one broken panel costs that
+     panel, and the rest of the app still works. */
+  function step(name, fn){
+    try{ fn(); }
+    catch(e){
+      console.error("Push to Play: " + name + " failed to render", e);
+      initFailures.push(name);
+    }
+  }
+  const initFailures = [];
+
+  step("identity", renderIdentity);
+  step("exercise lists", refreshExerciseLists);
+  step("train mode", ()=> setTrainMode(tray.length ? "workout" : "browse"));
   /* The full placeholder is cut off mid-word in a phone-width field, so the
      example list is dropped there. Bound to the same query the CSS uses. */
   (function(){
@@ -4054,16 +4478,25 @@
     mq.addEventListener ? mq.addEventListener("change", apply) : mq.addListener(apply);
   })();
 
-  renderTiles();
-  renderSubgroups();
-  renderGroups();
-  renderTray();
-  renderSplitLoader();
-  populateLiftPicker();
-  fillAccountForm();
-  fillSettingsForm();
-  setRangeDays(30);
-  renderShare();
-  setView("train");
+  step("categories", renderTiles);
+  step("muscle groups", renderSubgroups);
+  step("directory", renderGroups);
+  step("workout tray", renderTray);
+  step("split loader", renderSplitLoader);
+  step("record picker", populateLiftPicker);
+  step("account form", fillAccountForm);
+  step("settings form", fillSettingsForm);
+  step("share range", ()=> setRangeDays(30));
+  step("share", renderShare);
+  step("view", ()=> setView("train"));
+  updateStorageWarning();
+
+  if(initFailures.length){
+    const warn = document.getElementById("dataWarn");
+    if(warn){
+      warn.hidden = false;
+      document.getElementById("dataWarnWhat").textContent = initFailures.join(", ");
+    }
+  }
 })();
 </script>
