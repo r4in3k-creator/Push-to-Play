@@ -67,6 +67,12 @@
     --legs: #94670c;
     --abs:  #00846f;
     --superset: #b48ad8;
+    /* Cardio is a fifth category on the calendar, so it needs a hue that stays
+       apart from the other four AND from --superset under protan/deutan/tritan.
+       Searched the same way: worst pair against all five is ΔE 6.6, and the
+       chroma is held near the others' so it reads as part of the set rather
+       than a highlighter. */
+    --cardio: #7765d8;
 
     /* The category hues above are tuned for white ink sitting ON them. Used AS
        text they only reached 3.05–3.94:1 on these surfaces, so the section
@@ -83,6 +89,7 @@
        heading these colour reads "PUSH — CHEST", so the word is the encoding and
        the colour reinforces it. The fill palette, which does encode by colour
        alone on the calendar dots, is unchanged and still passes all-pairs. */
+    --cardio-ink: #8574e9;
     --push-ink: #c86b55;
     --pull-ink: #5588c4;
     --legs-ink: #c08b2d;
@@ -94,6 +101,7 @@
     --on-pull: #ffffff;
     --on-legs: #ffffff;
     --on-abs:  #ffffff;
+    --on-cardio: #ffffff;
 
     --grid: #ffffff14;
     --danger: #e0697a;
@@ -119,6 +127,8 @@
       --legs: #94670c;
       --abs:  #00846f;
       --superset: #7a4aa8;
+      --cardio: #7765d8;
+      --cardio-ink: #6d5acc;
       --push-ink: #963620;
       --pull-ink: #2267b0;
       --legs-ink: #8c651f;
@@ -128,6 +138,7 @@
       --on-pull: #ffffff;
       --on-legs: #ffffff;
       --on-abs:  #ffffff;
+      --on-cardio: #ffffff;
 
       --grid: #0000000f;
       --danger: #b03040;
@@ -152,6 +163,8 @@
     --legs: #94670c;
     --abs:  #00846f;
     --superset: #7a4aa8;
+    --cardio: #7765d8;
+    --cardio-ink: #6d5acc;
     --push-ink: #963620;
     --pull-ink: #2267b0;
     --legs-ink: #8c651f;
@@ -161,6 +174,7 @@
     --on-pull: #ffffff;
     --on-legs: #ffffff;
     --on-abs:  #ffffff;
+    --on-cardio: #ffffff;
 
     --grid: #0000000f;
     --danger: #b03040;
@@ -632,6 +646,7 @@
   .cal-dots span[data-cat="pull"]{ border-radius:1px; }
   .cal-dots span[data-cat="legs"]{ border-radius:1px; transform: rotate(45deg) scale(.82); }
   .cal-dots span[data-cat="abs"] { border-radius:999px; width:11px; height:5px; }
+  .cal-dots span[data-cat="cardio"]{ border-radius:1px; clip-path: polygon(50% 0%, 100% 100%, 0% 100%); width:8px; height:8px; }
   .cal-legend{ display:flex; gap:14px; flex-wrap:wrap; margin-top:14px; font-size:11.5px; color: var(--text-dim); }
   .cal-legend .li{ display:flex; align-items:center; gap:6px; }
   .cal-legend .sw{ width:9px; height:9px; }
@@ -639,6 +654,7 @@
   .cal-legend .sw[data-cat="pull"]{ border-radius:1px; }
   .cal-legend .sw[data-cat="legs"]{ border-radius:1px; transform: rotate(45deg) scale(.82); }
   .cal-legend .sw[data-cat="abs"] { border-radius:999px; width:13px; height:6px; }
+  .cal-legend .sw[data-cat="cardio"]{ border-radius:1px; clip-path: polygon(50% 0%, 100% 100%, 0% 100%); width:10px; height:10px; }
 
   .day-detail{ margin-top:18px; }
   .day-detail h3{ font-size:14px; margin-bottom:3px; }
@@ -931,6 +947,131 @@
   }
   .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
 
+
+  /* ================= Cardio =================
+     The interval row is the whole feature: machine dials on the left, a duration
+     on the right, one row per stage. Everything else is scaffolding around it. */
+  .cardio-panel{ margin-bottom:18px; --cat-color: var(--cardio); --cat-ink: var(--on-cardio); }
+  .cardio-panel h3{ font-size:14px; }
+  .cardio-panel .lede{ font-size:12px; color: var(--text-dim); margin:4px 0 0; max-width:58ch; }
+  .cardio-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:13px; flex-wrap:wrap; }
+  .cardio-total{ font-family:'Oswald',sans-serif; font-size:22px; font-variant-numeric: tabular-nums; color: var(--cardio-ink); flex:none; }
+
+  .machine-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .machine-btn{
+    display:flex; align-items:center; gap:8px; cursor:pointer; font-family:inherit;
+    background: var(--surface-2); border:1px solid var(--border-strong); border-radius:999px;
+    padding:8px 14px; font-size:12.5px; color: var(--text-dim); position:relative;
+  }
+  .machine-btn:hover{ color: var(--text); border-color: var(--cardio); }
+  .machine-btn.on{ background: var(--cardio); border-color: var(--cardio); color: var(--on-cardio); font-weight:600; }
+  .machine-btn .mx{ font-size:14px; line-height:1; opacity:.6; }
+  .machine-btn .mx:hover{ opacity:1; color: var(--danger); }
+
+  .new-machine{ margin-top:14px; }
+  .new-machine-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:12px; margin:12px 0; }
+  .new-machine .opt{ color: var(--text-faint); font-weight:400; text-transform:none; letter-spacing:0; }
+  .new-machine-actions{ display:flex; gap:8px; }
+
+  /* The header row labels the columns once instead of every row repeating them. */
+  .interval-head, .interval-row{
+    display:grid; gap:8px; align-items:center;
+    grid-template-columns: 30px repeat(var(--dials,2), minmax(0,1fr)) 92px 32px;
+  }
+  .interval-head{ margin-bottom:7px; padding:0 2px; }
+  .interval-head span{
+    font-size:9px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint);
+  }
+  .interval-list{ display:flex; flex-direction:column; gap:7px; }
+  .interval-row{
+    background: var(--surface-2); border:1px solid var(--border-soft);
+    border-left:3px solid var(--cardio); border-radius:8px; padding:8px 9px;
+  }
+  .interval-row .idx{
+    font-family:'JetBrains Mono',monospace; font-size:11px; color: var(--text-faint); text-align:center;
+  }
+  .interval-row input{
+    width:100%; min-width:0; background: var(--surface); border:1px solid var(--border-strong);
+    border-radius:6px; color: var(--text); padding:7px 8px; font-size:13px;
+    font-family:'JetBrains Mono',monospace; text-align:center;
+  }
+  .dur-cell{ display:flex; align-items:center; gap:3px; }
+  .dur-cell input{ text-align:center; padding:7px 4px; }
+  .dur-cell .sep{ color: var(--text-faint); font-size:12px; flex:none; }
+  .interval-row .rm{
+    width:30px; height:30px; border-radius:7px; border:1px solid var(--border-strong);
+    background: var(--surface); color: var(--text-dim); font-size:14px; line-height:1;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .interval-row .rm:hover{ color: var(--danger); border-color: var(--danger); }
+  .interval-empty{ color: var(--text-dim); font-size:13px; padding:18px 4px; }
+
+  .interval-actions{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+  .cardio-start{
+    display:flex; gap:8px; margin-top:14px; padding-top:13px;
+    border-top:1px solid var(--border-soft); flex-wrap:wrap;
+  }
+  .btn-start{ background: var(--cardio); border-color: var(--cardio); color: var(--on-cardio); }
+  .btn-start:hover{ color: var(--on-cardio); opacity:.9; }
+  .btn-start:disabled{ opacity:.45; cursor:not-allowed; }
+
+  .preset-list, .cardio-hist{ display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  .preset{
+    display:flex; align-items:center; gap:11px;
+    background: var(--surface-2); border:1px solid var(--border-soft);
+    border-left:3px solid var(--cardio); border-radius:8px; padding:10px 11px;
+  }
+  .preset .pinfo{ flex:1; min-width:0; }
+  .preset .pname{ font-size:13px; font-weight:500; }
+  .preset .pmeta{ font-size:11px; color: var(--text-faint); margin-top:2px; font-family:'JetBrains Mono',monospace; }
+  .preset .pbtns{ display:flex; gap:6px; flex:none; }
+  .preset .pbtns button{
+    border:1px solid var(--border-strong); background: var(--surface); color: var(--text-dim);
+    border-radius:6px; padding:6px 11px; font-size:11.5px; cursor:pointer; font-family:inherit;
+  }
+  .preset .pbtns button:hover{ color: var(--text); border-color: var(--text-faint); }
+  .preset .pbtns .go{ background: var(--cardio); border-color: var(--cardio); color: var(--on-cardio); font-weight:600; }
+  .preset .pbtns .go:hover{ color: var(--on-cardio); opacity:.9; }
+  .preset .pbtns .del:hover{ color: var(--danger); border-color: var(--danger); }
+
+  /* ---- the runner ---- */
+  .cardio-run{ border-left:3px solid var(--cardio); margin-bottom:18px; }
+  .run-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+  .run-plan{ font-family:'Oswald',sans-serif; font-size:16px; text-transform:uppercase; letter-spacing:.04em; }
+  .run-step{ font-size:11.5px; color: var(--text-dim); margin-top:3px; }
+  .run-clock{ text-align:center; padding:18px 0 6px; }
+  .run-remaining{
+    font-family:'Oswald',sans-serif; font-size:64px; line-height:1;
+    font-variant-numeric: tabular-nums; letter-spacing:.01em;
+  }
+  .run-settings{
+    display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:12px;
+  }
+  .run-settings .rs{
+    background: var(--cardio); color: var(--on-cardio); border-radius:999px;
+    padding:6px 15px; font-size:13.5px; font-weight:600;
+  }
+  .run-settings .rs .k{ font-weight:400; opacity:.8; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; }
+  .run-bar{ height:5px; background: var(--surface-3); border-radius:999px; overflow:hidden; margin-top:18px; }
+  .run-bar-fill{ height:100%; width:0%; background: var(--cardio); border-radius:999px; transition: width .25s linear; }
+  .run-totals{
+    display:flex; justify-content:space-between; font-size:11.5px; color: var(--text-faint);
+    font-family:'JetBrains Mono',monospace; margin-top:7px;
+  }
+  .run-next{
+    margin-top:14px; padding:10px 12px; background: var(--surface-2);
+    border:1px solid var(--border-soft); border-radius:8px; font-size:12.5px; color: var(--text-dim);
+  }
+  .run-next b{ color: var(--text); font-weight:600; }
+  .run-controls{ display:flex; gap:8px; margin-top:14px; }
+  .run-controls .btn{ flex:1; }
+  .run-note{ font-size:11px; color: var(--text-faint); margin:10px 0 0; }
+  .cardio-run.paused .run-remaining{ opacity:.5; }
+
+  @media (max-width:700px){
+    .new-machine-grid{ grid-template-columns:1fr; }
+  }
+
   /* ================= Phone sizing =================
      This block is deliberately last in the stylesheet. Nearly every rule it
      narrows is declared further up, and at equal specificity the later rule
@@ -1147,6 +1288,10 @@
       <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="13" width="7" height="7" rx="1.5"/></svg></span>
       <span class="tab-label">Splits</span>
     </button>
+    <button type="button" class="viewtab" data-view="cardio">
+      <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2.5-6 4 13 3-8.5L18 12h4"/></svg></span>
+      <span class="tab-label">Cardio</span>
+    </button>
     <button type="button" class="viewtab" data-view="calendar">
       <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="8.5" cy="14.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="14.5" r="1.1" fill="currentColor" stroke="none"/></svg></span>
       <span class="tab-label">Calendar</span>
@@ -1288,9 +1433,122 @@
             <span class="li"><span class="sw" data-cat="pull" style="background:var(--pull)"></span>Pull</span>
             <span class="li"><span class="sw" data-cat="legs" style="background:var(--legs)"></span>Legs</span>
             <span class="li"><span class="sw" data-cat="abs" style="background:var(--abs)"></span>Abs</span>
+            <span class="li"><span class="sw" data-cat="cardio" style="background:var(--cardio)"></span>Cardio</span>
           </div>
         </div>
         <div class="panel day-detail" id="dayDetail"></div>
+      </section>
+
+      <!-- ============ CARDIO ============ -->
+      <section class="view" id="view-cardio">
+        <div class="view-intro">
+          <h2>Cardio</h2>
+          <p>Build an interval plan — machine settings and how long you hold each
+             one — then run it. The timer calls out every change so you can keep
+             your eyes off the phone. Save a plan and it is one tap next time.</p>
+        </div>
+
+        <!-- ---- the runner, shown only while a plan is running ---- -->
+        <div class="panel cardio-run" id="cardioRun" hidden>
+          <div class="run-head">
+            <div>
+              <div class="run-plan" id="runPlan">Treadmill</div>
+              <div class="run-step" id="runStep">Interval 1 of 6</div>
+            </div>
+            <button type="button" class="btn btn-danger" id="runStop">Stop</button>
+          </div>
+
+          <div class="run-clock">
+            <div class="run-remaining" id="runRemaining">0:00</div>
+            <div class="run-settings" id="runSettings"></div>
+          </div>
+
+          <div class="run-bar"><div class="run-bar-fill" id="runBarFill"></div></div>
+          <div class="run-totals">
+            <span id="runElapsed">0:00 elapsed</span>
+            <span id="runLeft">0:00 left</span>
+          </div>
+
+          <div class="run-next" id="runNext"></div>
+
+          <div class="run-controls">
+            <button type="button" class="btn" id="runPause">Pause</button>
+            <button type="button" class="btn" id="runSkip">Skip interval</button>
+          </div>
+          <p class="run-note" id="runNote"></p>
+        </div>
+
+        <!-- ---- the builder ---- -->
+        <div id="cardioBuild">
+          <div class="panel cardio-panel">
+            <div class="cardio-head">
+              <div>
+                <h3>Machine</h3>
+                <p class="lede">Each machine has its own settings. Pick one and the
+                   interval rows below change to match.</p>
+              </div>
+              <button type="button" class="btn" id="newMachineBtn" aria-expanded="false"
+                      aria-controls="newMachinePanel">+ New machine</button>
+            </div>
+            <div class="machine-row" id="machineRow"></div>
+
+            <div class="panel new-machine" id="newMachinePanel" hidden>
+              <h3>Add your own machine</h3>
+              <p class="lede">Name it, then name up to two dials you set on it —
+                 whatever the console actually calls them.</p>
+              <div class="new-machine-grid">
+                <label class="field">Machine name
+                  <input type="text" id="nmName" placeholder="e.g. Curved treadmill" maxlength="40">
+                </label>
+                <label class="field">First setting
+                  <input type="text" id="nmF1" placeholder="e.g. Level" maxlength="20">
+                </label>
+                <label class="field">Second setting <span class="opt">optional</span>
+                  <input type="text" id="nmF2" placeholder="e.g. Speed" maxlength="20">
+                </label>
+              </div>
+              <div class="new-machine-actions">
+                <button type="button" class="btn btn-primary" id="nmSave">Add machine</button>
+                <button type="button" class="btn" id="nmCancel">Cancel</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel cardio-panel">
+            <div class="cardio-head">
+              <div>
+                <h3 id="intervalTitle">Intervals</h3>
+                <p class="lede" id="intervalLede">One row per stage of the workout.</p>
+              </div>
+              <div class="cardio-total" id="cardioTotal">0:00</div>
+            </div>
+
+            <div class="interval-head" id="intervalHead"></div>
+            <div class="interval-list" id="intervalList"></div>
+
+            <div class="interval-actions">
+              <button type="button" class="btn" id="addInterval">+ Add interval</button>
+              <button type="button" class="btn" id="clearIntervals">Clear</button>
+            </div>
+
+            <div class="cardio-start">
+              <button type="button" class="btn btn-primary btn-start" id="startCardio">Start workout</button>
+              <button type="button" class="btn" id="savePlan">Save as preset</button>
+            </div>
+          </div>
+
+          <div class="panel cardio-panel">
+            <h3>Saved presets</h3>
+            <p class="lede">Plans you saved. Load one to run it again, or to edit it
+               into something new.</p>
+            <div class="preset-list" id="presetList"></div>
+          </div>
+
+          <div class="panel cardio-panel">
+            <h3>Recent cardio</h3>
+            <div class="cardio-hist" id="cardioHist"></div>
+          </div>
+        </div>
       </section>
 
       <!-- ============ RECORDS ============ -->
@@ -1401,6 +1659,17 @@
                 <button type="button" data-theme-choice="dark">Dark</button>
               </div>
               <span class="hint">Auto follows your device's light or dark setting.</span>
+            </div>
+            <div class="field wide">
+              <label for="stCardioCues">Cardio interval cues</label>
+              <select id="stCardioCues">
+                <option value="both">Beep and vibrate</option>
+                <option value="sound">Beep only</option>
+                <option value="vibrate">Vibrate only</option>
+                <option value="none">Silent — screen only</option>
+              </select>
+              <span class="hint">How the interval timer tells you the machine settings
+                have changed. Vibration is Android only; iOS does not allow it.</span>
             </div>
             <div class="field wide">
               <label for="stClearOnLog">After logging a session</label>
@@ -1676,7 +1945,9 @@
      by name instead. Never insert before it — only append. */
   const BUILTIN_EX_COUNT = EX.length;
 
-  const CAT_LABEL = {push:"Push", pull:"Pull", legs:"Legs", abs:"Abs"};
+  /* cardio is a calendar category, not a directory one — it is deliberately not
+     in CAT_ORDER, which drives the exercise tiles and the share codec. */
+  const CAT_LABEL = {push:"Push", pull:"Pull", legs:"Legs", abs:"Abs", cardio:"Cardio"};
   const CAT_SUB = {
     push: "Chest · Shoulders · Triceps",
     pull: "Back · Traps · Biceps",
@@ -1862,7 +2133,9 @@
   const KEY = { tray:"ptp-tray", theme:"ptp-theme", profile:"ptp-profile",
                 settings:"ptp-settings", history:"ptp-history", prs:"ptp-prs",
                 splits:"ptp-splits", activeSplit:"ptp-active-split",
-                customEx:"ptp-custom-ex", customSplits:"ptp-custom-splits" };
+                customEx:"ptp-custom-ex", customSplits:"ptp-custom-splits",
+                cardioPlans:"ptp-cardio-plans", cardioLog:"ptp-cardio-log",
+                cardioMachines:"ptp-cardio-machines" };
 
   /* Everything here comes back from storage that an older version of this app
      wrote, that a sync tool touched, or that a user pasted in by hand. JSON.parse
@@ -1967,7 +2240,8 @@
   function daysBetween(a,b){ return Math.round((fromYmd(a) - fromYmd(b)) / 86400000); }
 
   /* ================= App state ================= */
-  const DEFAULT_SETTINGS = { units:"kg", weekStart:1, defaultSets:3, defaultRest:90, clearOnLog:"clear" };
+  const DEFAULT_SETTINGS = { units:"kg", weekStart:1, defaultSets:3, defaultRest:90,
+                             clearOnLog:"clear", cardioSound:true, cardioVibrate:true };
   const DEFAULT_PROFILE  = { name:"", email:"", bodyweight:"", height:"", goal:"", started:"", experience:"intermediate" };
   const DEFAULT_LIFTS = [
     { key:"bench",    name:"Barbell Bench Press", cat:"push", entries:[] },
@@ -2175,6 +2449,7 @@
 
     if(view === "splits"){ pickerFor = null; renderSplitLibrary(); renderSplitEditor(); }
     if(view === "calendar") renderCalendar();
+    if(view === "cardio" && !run) renderCardio();
     if(view === "records")  renderRecords();
     if(view === "account")  fillAccountForm();
     if(view === "settings"){ fillSettingsForm(); renderShare(); refreshInstallCard(); }
@@ -3162,6 +3437,594 @@
       : "Session logged to today");
   });
 
+  /* ================= Cardio =================
+     Cardio is not sets and reps, so it does not share the strength model. A plan
+     is an ordered list of intervals; an interval is whatever dials that machine
+     has, plus a duration. That one shape covers the treadmill's incline+speed and
+     the stairmaster's single level without special-casing either. */
+
+  const CARDIO_MACHINES = [
+    { key:"treadmill",  name:"Treadmill",
+      fields:[{k:"incline", label:"Incline", max:40,  step:"0.5"},
+              {k:"speed",   label:"Speed",   max:30,  step:"0.1"}] },
+    { key:"stairs",     name:"Stairmaster",
+      fields:[{k:"level",   label:"Level",   max:30,  step:"1"}] },
+    { key:"bike",       name:"Indoor Bike",
+      fields:[{k:"level",   label:"Level",   max:30,  step:"1"},
+              {k:"rpm",     label:"RPM",     max:200, step:"1"}] },
+    { key:"rower",      name:"Rower",
+      fields:[{k:"damper",  label:"Damper",  max:10,  step:"1"},
+              {k:"spm",     label:"Stroke rate", max:60, step:"1"}] },
+    { key:"elliptical", name:"Elliptical",
+      fields:[{k:"resistance", label:"Resistance", max:30, step:"1"},
+              {k:"incline",    label:"Incline",    max:20, step:"1"}] },
+    /* No dials at all — the timer is the whole point. */
+    { key:"rope",       name:"Jump Rope",   fields:[] }
+  ];
+
+  const isCardioMachine = m => isObj(m) && typeof m.name === "string" && Array.isArray(m.fields);
+  let customMachines = load(KEY.cardioMachines, [], isArrOf(isCardioMachine));
+
+  function allMachines(){ return CARDIO_MACHINES.concat(customMachines); }
+  function machineByKey(k){ return allMachines().find(m=>m.key === k) || CARDIO_MACHINES[0]; }
+
+  const isInterval = v => isObj(v) && isObj(v.v) && typeof v.sec === "number";
+  const isPlan = v => isObj(v) && typeof v.name === "string" && isArrOf(isInterval)(v.intervals);
+  let cardioPlans = load(KEY.cardioPlans, [], isArrOf(isPlan));
+  let cardioLog   = load(KEY.cardioLog, [], arrOfObj);
+
+  /* The plan being edited. Not persisted as a preset until the user saves it, but
+     kept in the tray key's spirit: a half-built plan survives a reload. */
+  let cardioMachine = load(KEY.cardioPlans + "-m", "treadmill", v=>typeof v === "string");
+  let intervals = load(KEY.cardioPlans + "-draft", [], isArrOf(isInterval));
+  let loadedPlanKey = null;
+
+  function persistCardio(){
+    save(KEY.cardioPlans, cardioPlans);
+    save(KEY.cardioPlans + "-draft", intervals);
+    save(KEY.cardioPlans + "-m", cardioMachine);
+  }
+  function persistMachines(){ save(KEY.cardioMachines, customMachines); }
+  function persistCardioLog(){ save(KEY.cardioLog, cardioLog); }
+
+  function totalSec(list){ return list.reduce((a,i)=> a + (i.sec||0), 0); }
+  /* mm:ss below an hour, h:mm:ss above it — a 90-minute plan should not read 90:00 */
+  function clock(sec){
+    sec = Math.max(0, Math.round(sec));
+    const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+    return h ? h + ":" + String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0")
+             : m + ":" + String(s).padStart(2,"0");
+  }
+  function longClock(sec){
+    sec = Math.max(0, Math.round(sec));
+    const m = Math.floor(sec/60), s = sec%60;
+    if(!m) return s + " sec";
+    return m + " min" + (s ? " " + s + " sec" : "");
+  }
+  /* A settings summary, in the machine's own words: "Incline 3 · Speed 2.5". */
+  function settingsText(machine, v){
+    const parts = machine.fields
+      .map(f=> (v[f.k] === "" || v[f.k] == null) ? null : f.label + " " + v[f.k])
+      .filter(Boolean);
+    return parts.length ? parts.join(" · ") : "Steady";
+  }
+
+  const machineRow    = document.getElementById("machineRow");
+  const intervalHead  = document.getElementById("intervalHead");
+  const intervalList  = document.getElementById("intervalList");
+  const cardioTotalEl = document.getElementById("cardioTotal");
+  const presetList    = document.getElementById("presetList");
+  const cardioHistEl  = document.getElementById("cardioHist");
+
+  function renderMachines(){
+    const cur = machineByKey(cardioMachine);
+    machineRow.innerHTML = allMachines().map(m=>{
+      const on = m.key === cur.key;
+      const del = customMachines.some(c=>c.key === m.key)
+        ? `<span class="mx" role="button" tabindex="0" data-del="${esc(m.key)}"
+                 aria-label="Delete ${esc(m.name)}">×</span>` : "";
+      return `<button type="button" class="machine-btn${on?" on":""}" data-m="${esc(m.key)}"
+                      data-focus="machine-${esc(m.key)}" aria-pressed="${on}">${esc(m.name)}${del}</button>`;
+    }).join("");
+
+    machineRow.querySelectorAll(".machine-btn").forEach(btn=>{
+      btn.addEventListener("click", (e)=>{
+        if(e.target.dataset.del) return;      // the × handles itself
+        if(btn.dataset.m === cardioMachine) return;
+        cardioMachine = btn.dataset.m;
+        /* Dials do not carry between machines — an incline is not a level — so a
+           switch keeps the durations and drops the settings. */
+        intervals = intervals.map(i=>({ v:{}, sec:i.sec }));
+        loadedPlanKey = null;
+        persistCardio(); renderCardio();
+      });
+    });
+    machineRow.querySelectorAll("[data-del]").forEach(x=>{
+      const go = (e)=>{
+        e.stopPropagation();
+        const key = x.dataset.del;
+        const m = allMachines().find(mm=>mm.key === key);
+        const used = cardioPlans.filter(pl=>pl.machine === key).length;
+        if(!confirm(`Delete "${m.name}"?` + (used ? `\n\n${used} saved preset${used>1?"s":""} use${used>1?"":"s"} it and will be removed too.` : ""))) return;
+        customMachines = customMachines.filter(mm=>mm.key !== key);
+        cardioPlans = cardioPlans.filter(pl=>pl.machine !== key);
+        if(cardioMachine === key){ cardioMachine = "treadmill"; intervals = []; }
+        persistMachines(); persistCardio(); renderCardio();
+        showToast("Machine removed");
+      };
+      x.addEventListener("click", go);
+      x.addEventListener("keydown", (e)=>{ if(e.key === "Enter" || e.key === " "){ e.preventDefault(); go(e); } });
+    });
+  }
+
+  function renderIntervals(){
+    const m = machineByKey(cardioMachine);
+    const dials = Math.max(m.fields.length, 1);
+    intervalHead.style.setProperty("--dials", dials);
+    intervalList.style.setProperty("--dials", dials);
+
+    document.getElementById("intervalTitle").textContent = m.name + " intervals";
+    document.getElementById("intervalLede").textContent = m.fields.length
+      ? "One row per stage. Set " + m.fields.map(f=>f.label.toLowerCase()).join(" and ") + ", and how long you hold it."
+      : "One row per stage — just how long each one lasts.";
+
+    intervalHead.innerHTML = intervals.length
+      ? `<span></span>` + (m.fields.length
+          ? m.fields.map(f=>`<span>${esc(f.label)}</span>`).join("")
+          : `<span>Stage</span>`)
+        + `<span>Min &nbsp;Sec</span><span></span>`
+      : "";
+
+    if(!intervals.length){
+      intervalList.innerHTML = `<div class="interval-empty">No intervals yet — add the first one below,
+        or load a saved preset.</div>`;
+      cardioTotalEl.textContent = "0:00";
+      document.getElementById("startCardio").disabled = true;
+      return;
+    }
+    document.getElementById("startCardio").disabled = false;
+
+    intervalList.innerHTML = intervals.map((iv, i)=>{
+      const cells = m.fields.length
+        ? m.fields.map(f=>`<input type="text" inputmode="decimal" data-i="${i}" data-k="${esc(f.k)}"
+              data-focus="iv-${i}-${esc(f.k)}" value="${esc(iv.v[f.k] ?? "")}" placeholder="—"
+              aria-label="Interval ${i+1} ${esc(f.label.toLowerCase())}">`).join("")
+        : `<input type="text" data-i="${i}" data-k="note" data-focus="iv-${i}-note"
+              value="${esc(iv.v.note ?? "")}" placeholder="e.g. fast" maxlength="18"
+              aria-label="Interval ${i+1} label">`;
+      const mm = Math.floor((iv.sec||0)/60), ss = (iv.sec||0)%60;
+      return `<div class="interval-row">
+        <span class="idx">${i+1}</span>
+        ${cells}
+        <span class="dur-cell">
+          <input type="text" inputmode="numeric" data-i="${i}" data-k="min" data-focus="iv-${i}-min"
+                 value="${mm||""}" placeholder="0" aria-label="Interval ${i+1} minutes">
+          <span class="sep">:</span>
+          <input type="text" inputmode="numeric" data-i="${i}" data-k="sec" data-focus="iv-${i}-sec"
+                 value="${String(ss).padStart(2,"0")}" placeholder="00" aria-label="Interval ${i+1} seconds">
+        </span>
+        <button type="button" class="rm" data-rm="${i}" data-focus="iv-${i}-rm"
+                aria-label="Remove interval ${i+1}">×</button>
+      </div>`;
+    }).join("");
+
+    cardioTotalEl.textContent = clock(totalSec(intervals));
+
+    intervalList.querySelectorAll("input").forEach(inp=>{
+      inp.addEventListener("input", ()=> readInterval(inp, false));
+      inp.addEventListener("blur",  ()=> readInterval(inp, true));
+    });
+    intervalList.querySelectorAll("[data-rm]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        intervals.splice(parseInt(btn.dataset.rm,10), 1);
+        loadedPlanKey = null; persistCardio(); renderIntervals();
+      });
+    });
+  }
+
+  /* Same rule as the set fields: leave typing alone, normalise on blur. Extracting
+     the first number instead would turn "1e5" into 1 without saying so. */
+  function cleanNum(v, max, decimals){
+    const t = String(v).trim().replace(/,/g, ".");
+    if(t === "") return "";
+    const re = decimals ? /^\d{1,4}(?:\.\d{1,2})?$/ : /^\d{1,4}$/;
+    if(!re.test(t)) return "";
+    const n = parseFloat(t);
+    if(!isFinite(n) || n < 0 || n > max) return "";
+    return String(n);
+  }
+
+  function readInterval(inp, commit){
+    const i = parseInt(inp.dataset.i,10), k = inp.dataset.k;
+    const iv = intervals[i];
+    if(!iv) return;
+    if(k === "min" || k === "sec"){
+      const mmEl = intervalList.querySelector(`input[data-i="${i}"][data-k="min"]`);
+      const ssEl = intervalList.querySelector(`input[data-i="${i}"][data-k="sec"]`);
+      let mm = parseInt(String(mmEl.value).replace(/\D/g,""),10) || 0;
+      let ss = parseInt(String(ssEl.value).replace(/\D/g,""),10) || 0;
+      /* 90 seconds typed into the seconds box means 1:30, not a rejected value. */
+      if(ss > 59){ mm += Math.floor(ss/60); ss = ss % 60; }
+      mm = Math.min(mm, 599);
+      iv.sec = mm*60 + ss;
+      if(commit){
+        mmEl.value = mm || "";
+        ssEl.value = String(ss).padStart(2,"0");
+      }
+      cardioTotalEl.textContent = clock(totalSec(intervals));
+    } else if(k === "note"){
+      iv.v.note = inp.value;
+    } else {
+      const m = machineByKey(cardioMachine);
+      const f = m.fields.find(x=>x.k === k);
+      if(commit && f){
+        const clean = cleanNum(inp.value, f.max, f.step !== "1");
+        if(clean !== inp.value) inp.value = clean;
+        iv.v[k] = clean;
+      } else {
+        iv.v[k] = inp.value;
+      }
+    }
+    loadedPlanKey = null;
+    persistCardio();
+  }
+
+
+  /* ---- presets: a plan the user saved to run again ---- */
+  function renderPresets(){
+    if(!cardioPlans.length){
+      presetList.innerHTML = `<div class="interval-empty">Nothing saved yet. Build a plan above
+        and press “Save as preset”.</div>`;
+      return;
+    }
+    presetList.innerHTML = cardioPlans.map(pl=>{
+      const m = machineByKey(pl.machine);
+      return `<div class="preset">
+        <div class="pinfo">
+          <div class="pname">${esc(pl.name)}</div>
+          <div class="pmeta">${esc(m.name)} · ${pl.intervals.length} interval${pl.intervals.length===1?"":"s"} · ${clock(totalSec(pl.intervals))}</div>
+        </div>
+        <div class="pbtns">
+          <button type="button" class="go"  data-run="${esc(pl.key)}">Start</button>
+          <button type="button" data-load="${esc(pl.key)}">Edit</button>
+          <button type="button" class="del" data-del="${esc(pl.key)}" aria-label="Delete ${esc(pl.name)}">×</button>
+        </div>
+      </div>`;
+    }).join("");
+
+    presetList.querySelectorAll("[data-run]").forEach(b=> b.addEventListener("click", ()=>{
+      const pl = cardioPlans.find(x=>x.key === b.dataset.run);
+      if(pl) startRun(pl.machine, pl.intervals, pl.name);
+    }));
+    presetList.querySelectorAll("[data-load]").forEach(b=> b.addEventListener("click", ()=>{
+      const pl = cardioPlans.find(x=>x.key === b.dataset.load);
+      if(!pl) return;
+      cardioMachine = pl.machine;
+      intervals = JSON.parse(JSON.stringify(pl.intervals));
+      loadedPlanKey = pl.key;
+      persistCardio(); renderCardio();
+      showToast(`“${pl.name}” loaded`);
+    }));
+    presetList.querySelectorAll("[data-del]").forEach(b=> b.addEventListener("click", ()=>{
+      const pl = cardioPlans.find(x=>x.key === b.dataset.del);
+      if(!pl || !confirm(`Delete the preset “${pl.name}”?`)) return;
+      cardioPlans = cardioPlans.filter(x=>x.key !== pl.key);
+      if(loadedPlanKey === pl.key) loadedPlanKey = null;
+      persistCardio(); renderPresets();
+      showToast("Preset deleted");
+    }));
+  }
+
+  function renderCardioHist(){
+    const recent = cardioLog.slice(0, 8);
+    if(!recent.length){
+      cardioHistEl.innerHTML = `<div class="interval-empty">Cardio you finish shows up here,
+        and on your calendar.</div>`;
+      return;
+    }
+    cardioHistEl.innerHTML = recent.map(sn=>{
+      const m = machineByKey(sn.machine);
+      const done = sn.doneSec < sn.totalSec
+        ? ` · stopped at ${clock(sn.doneSec)} of ${clock(sn.totalSec)}`
+        : ` · ${clock(sn.totalSec)}`;
+      return `<div class="preset">
+        <div class="pinfo">
+          <div class="pname">${esc(sn.name || m.name)}</div>
+          <div class="pmeta">${esc(shortDate(sn.date))} · ${esc(m.name)}${done}</div>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  function renderCardio(){
+    renderMachines();
+    renderIntervals();
+    renderPresets();
+    renderCardioHist();
+  }
+
+  /* ================= Interval timer =================
+     Driven by wall-clock timestamps, not by decrementing a counter each tick. A
+     30-minute plan run off accumulated setInterval callbacks drifts, and a phone
+     that backgrounds the tab throttles them to nothing — with timestamps, coming
+     back to the app shows the correct time rather than however many ticks fired. */
+  const runPanel  = document.getElementById("cardioRun");
+  const buildPane = document.getElementById("cardioBuild");
+  let run = null;          // {machine, name, list, idx, startedAt, elapsedBefore, paused, tick}
+  let wakeLock = null;
+  let audioCtx = null;
+
+  /* A tone, synthesised rather than fetched — it has to work with no signal. */
+  function beep(count){
+    if(!settings.cardioSound) return;
+    try{
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if(audioCtx.state === "suspended") audioCtx.resume();
+      for(let i=0;i<count;i++){
+        const t0 = audioCtx.currentTime + i*0.22;
+        const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(i === count-1 && count > 1 ? 1180 : 880, t0);
+        /* Ramp rather than switch: an abrupt gain change clicks. */
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.32, t0 + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.17);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(t0); osc.stop(t0 + 0.2);
+      }
+    }catch(e){ /* no audio on this device — the vibration and the screen still carry it */ }
+  }
+  function buzz(pattern){
+    if(!settings.cardioVibrate) return;
+    /* iOS Safari has no Vibration API at all; this is a no-op there by design. */
+    try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){}
+  }
+  function cue(isLast){
+    beep(isLast ? 3 : 1);
+    buzz(isLast ? [180,90,180,90,180] : [220]);
+  }
+
+  async function keepAwake(on){
+    try{
+      if(on){
+        if("wakeLock" in navigator && !wakeLock) wakeLock = await navigator.wakeLock.request("screen");
+      } else if(wakeLock){
+        await wakeLock.release(); wakeLock = null;
+      }
+    }catch(e){ wakeLock = null; }   /* not supported, or denied — not worth surfacing */
+  }
+  /* A wake lock is dropped whenever the tab is hidden, so it has to be retaken. */
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.visibilityState === "visible" && run && !run.paused) keepAwake(true);
+  });
+
+  function runElapsedInCurrent(){
+    if(!run) return 0;
+    return run.elapsedBefore + (run.paused ? 0 : (Date.now() - run.startedAt) / 1000);
+  }
+
+  function startRun(machineKey, list, name){
+    const clean = list.filter(i=> (i.sec||0) > 0);
+    if(!clean.length){ showToast("Give at least one interval a duration"); return; }
+    run = {
+      machine: machineByKey(machineKey),
+      name: name || machineByKey(machineKey).name,
+      list: JSON.parse(JSON.stringify(clean)),
+      idx: 0,
+      startedAt: Date.now(),
+      elapsedBefore: 0,
+      paused: false,
+      tick: null
+    };
+    setView("cardio");
+    buildPane.hidden = true;
+    runPanel.hidden = false;
+    runPanel.classList.remove("paused");
+    document.getElementById("runPause").textContent = "Pause";
+    document.getElementById("runNote").textContent =
+      ("wakeLock" in navigator) ? "The screen stays awake while this runs."
+                                : "Keep the app open — the tone only sounds while it is.";
+    keepAwake(true);
+    /* The first tone has to come from the user's own tap, or iOS will not let the
+       audio context start at all. */
+    beep(1); buzz([120]);
+    run.tick = setInterval(paintRun, 200);
+    paintRun();
+  }
+
+  function paintRun(){
+    if(!run) return;
+    const cur = run.list[run.idx];
+    const inCur = runElapsedInCurrent();
+    let left = cur.sec - inCur;
+
+    if(left <= 0){
+      /* Carry the overshoot into the next interval instead of discarding it, so a
+         long plan does not gain a fraction of a second at every boundary. */
+      const over = -left;
+      if(run.idx >= run.list.length - 1){ finishRun(true); return; }
+      run.idx++;
+      run.elapsedBefore = over;
+      run.startedAt = Date.now();
+      cue(false);
+      paintRun();
+      return;
+    }
+
+    const done = run.list.slice(0, run.idx).reduce((a,i)=>a+i.sec, 0) + inCur;
+    const total = run.list.reduce((a,i)=>a+i.sec, 0);
+
+    document.getElementById("runPlan").textContent = run.name;
+    /* An unnamed plan is titled after its machine, so naming it again here would
+       read "Treadmill / Interval 1 of 6 · Treadmill". */
+    const sameName = run.name === run.machine.name;
+    document.getElementById("runStep").textContent =
+      `Interval ${run.idx+1} of ${run.list.length}` + (sameName ? "" : ` · ${run.machine.name}`);
+    document.getElementById("runRemaining").textContent = clock(left);
+
+    const v = cur.v || {};
+    const chips = run.machine.fields.length
+      ? run.machine.fields.map(f=>{
+          const val = (v[f.k] === "" || v[f.k] == null) ? "—" : v[f.k];
+          return `<span class="rs"><span class="k">${esc(f.label)}</span> ${esc(val)}</span>`;
+        }).join("")
+      : `<span class="rs">${esc(v.note || "Go")}</span>`;
+    document.getElementById("runSettings").innerHTML = chips;
+
+    document.getElementById("runBarFill").style.width = Math.min(100, (done/total)*100) + "%";
+    document.getElementById("runElapsed").textContent = clock(done) + " elapsed";
+    document.getElementById("runLeft").textContent = clock(total - done) + " left";
+
+    const next = run.list[run.idx+1];
+    document.getElementById("runNext").innerHTML = next
+      ? `Next: <b>${esc(settingsText(run.machine, next.v || {}))}</b> for ${esc(longClock(next.sec))}`
+      : `<b>Last interval.</b>`;
+  }
+
+  function finishRun(completed){
+    if(!run) return;
+    const total = run.list.reduce((a,i)=>a+i.sec, 0);
+    const doneSec = completed
+      ? total
+      : Math.min(total, run.list.slice(0, run.idx).reduce((a,i)=>a+i.sec, 0) + runElapsedInCurrent());
+
+    clearInterval(run.tick);
+    if(completed) cue(true); else { beep(1); buzz([300]); }
+    keepAwake(false);
+
+    /* A plan you ran to the end is a session whatever its length — a short finisher
+       is still a finisher. The floor is only for the misfire: start, then stop
+       again a second later. */
+    if(completed || doneSec >= 10){
+      cardioLog.unshift({
+        date: todayStr(),
+        loggedAt: new Date().toISOString(),
+        machine: run.machine.key,
+        name: run.name,
+        intervals: run.list,
+        totalSec: total,
+        doneSec: Math.round(doneSec),
+        completed: !!completed
+      });
+      cardioLog = cardioLog.slice(0, 400);
+      persistCardioLog();
+    }
+
+    const label = completed ? "Cardio done — " + clock(total) + " logged"
+                            : (doneSec >= 10 ? "Stopped — " + clock(doneSec) + " logged"
+                                             : "Stopped — too short to log");
+    run = null;
+    runPanel.hidden = true;
+    buildPane.hidden = false;
+    renderCardio();
+    if(currentView === "calendar") renderCalendar();
+    showToast(label);
+  }
+
+  document.getElementById("runPause").addEventListener("click", ()=>{
+    if(!run) return;
+    if(run.paused){
+      run.startedAt = Date.now();
+      run.paused = false;
+      runPanel.classList.remove("paused");
+      document.getElementById("runPause").textContent = "Pause";
+      keepAwake(true);
+    } else {
+      run.elapsedBefore = runElapsedInCurrent();
+      run.paused = true;
+      runPanel.classList.add("paused");
+      document.getElementById("runPause").textContent = "Resume";
+      keepAwake(false);
+    }
+    paintRun();
+  });
+  document.getElementById("runSkip").addEventListener("click", ()=>{
+    if(!run) return;
+    if(run.idx >= run.list.length - 1){ finishRun(true); return; }
+    run.idx++; run.elapsedBefore = 0; run.startedAt = Date.now();
+    cue(false); paintRun();
+  });
+  document.getElementById("runStop").addEventListener("click", ()=>{
+    if(!run) return;
+    if(!confirm("Stop this workout? What you have done so far is logged.")) return;
+    finishRun(false);
+  });
+
+  /* ---- builder controls ---- */
+  document.getElementById("addInterval").addEventListener("click", ()=>{
+    const last = intervals[intervals.length-1];
+    /* A new row copies the previous one's settings — most plans step one dial at
+       a time, so this is usually one edit rather than three. */
+    intervals.push({ v: last ? JSON.parse(JSON.stringify(last.v)) : {}, sec: last ? last.sec : 60 });
+    loadedPlanKey = null;
+    persistCardio(); renderIntervals();
+    const rows = intervalList.querySelectorAll(".interval-row");
+    const first = rows[rows.length-1] && rows[rows.length-1].querySelector("input");
+    if(first) first.focus();
+  });
+  document.getElementById("clearIntervals").addEventListener("click", ()=>{
+    if(!intervals.length) return;
+    if(!confirm("Clear all intervals from this plan?")) return;
+    intervals = []; loadedPlanKey = null;
+    persistCardio(); renderIntervals();
+  });
+  document.getElementById("startCardio").addEventListener("click", ()=>{
+    const pl = cardioPlans.find(x=>x.key === loadedPlanKey);
+    startRun(cardioMachine, intervals, pl ? pl.name : machineByKey(cardioMachine).name);
+  });
+  document.getElementById("savePlan").addEventListener("click", ()=>{
+    const usable = intervals.filter(i=>(i.sec||0) > 0);
+    if(!usable.length){ showToast("Give at least one interval a duration"); return; }
+    const m = machineByKey(cardioMachine);
+    const suggested = (cardioPlans.find(x=>x.key === loadedPlanKey) || {}).name
+      || `${m.name} ${clock(totalSec(usable))}`;
+    const name = (prompt("Name this preset", suggested) || "").trim();
+    if(!name) return;
+    const existing = cardioPlans.find(x=>x.name.toLowerCase() === name.toLowerCase());
+    if(existing && !confirm(`“${name}” already exists. Replace it?`)) return;
+    const plan = {
+      key: existing ? existing.key : "cp-" + Math.random().toString(36).slice(2,9),
+      name, machine: cardioMachine,
+      intervals: JSON.parse(JSON.stringify(usable)),
+      created: todayStr()
+    };
+    if(existing) cardioPlans[cardioPlans.indexOf(existing)] = plan;
+    else cardioPlans.unshift(plan);
+    loadedPlanKey = plan.key;
+    persistCardio(); renderPresets();
+    showToast(`“${name}” saved`);
+  });
+
+  /* ---- adding a machine ---- */
+  const newMachinePanel = document.getElementById("newMachinePanel");
+  function openNewMachine(open){
+    newMachinePanel.hidden = !open;
+    document.getElementById("newMachineBtn").setAttribute("aria-expanded", String(!!open));
+    if(open) document.getElementById("nmName").focus();
+  }
+  document.getElementById("newMachineBtn").addEventListener("click", ()=> openNewMachine(newMachinePanel.hidden));
+  document.getElementById("nmCancel").addEventListener("click", ()=>{
+    ["nmName","nmF1","nmF2"].forEach(id=> document.getElementById(id).value = "");
+    openNewMachine(false);
+  });
+  document.getElementById("nmSave").addEventListener("click", ()=>{
+    const name = document.getElementById("nmName").value.trim();
+    if(!name){ showToast("Give the machine a name"); return; }
+    if(allMachines().some(m=>m.name.toLowerCase() === name.toLowerCase())){
+      showToast("You already have a machine with that name"); return;
+    }
+    const labels = [document.getElementById("nmF1").value.trim(),
+                    document.getElementById("nmF2").value.trim()].filter(Boolean);
+    const fields = labels.map((label, i)=>({ k:"f"+i, label, max:999, step:"0.1" }));
+    customMachines.push({ key:"cm-"+slug(name)+"-"+Math.random().toString(36).slice(2,5), name, fields, custom:true });
+    persistMachines();
+    ["nmName","nmF1","nmF2"].forEach(id=> document.getElementById(id).value = "");
+    openNewMachine(false);
+    cardioMachine = customMachines[customMachines.length-1].key;
+    intervals = [];
+    persistCardio(); renderCardio();
+    showToast(`${name} added`);
+  });
+
   /* ================= Calendar ================= */
   const calGrid   = document.getElementById("calGrid");
   const calTitle  = document.getElementById("calTitle");
@@ -3170,10 +4033,14 @@
   const DOW_LONG  = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
   function sessionFor(dateStr){ return history.find(h=>h.date===dateStr) || null; }
+  /* Cardio lives in its own store — intervals and machine dials are not sets and
+     reps — but the calendar is one calendar, so it reads both. */
+  function cardioFor(dateStr){ return cardioLog.filter(c=>c.date === dateStr); }
+  function trainedOn(dateStr){ return !!sessionFor(dateStr) || cardioFor(dateStr).length > 0; }
 
   function currentStreak(){
-    if(!history.length) return 0;
-    const dates = new Set(history.map(h=>h.date));
+    const dates = new Set(history.map(h=>h.date).concat(cardioLog.map(c=>c.date)));
+    if(!dates.size) return 0;
     const today = todayStr();
     let cursor = dates.has(today) ? today : null;
     if(!cursor){
@@ -3198,11 +4065,21 @@
     monthSessions.forEach(s=> s.items.forEach(i=>{ catCount[i.cat] = (catCount[i.cat]||0) + 1; }));
     const topCat = Object.keys(catCount).sort((a,b)=>catCount[b]-catCount[a])[0];
 
+    const monthCardio = cardioLog.filter(c=>{
+      const d = fromYmd(c.date);
+      return d.getFullYear()===y && d.getMonth()===m;
+    });
+    const cardioSec = monthCardio.reduce((a,c)=> a + (c.doneSec||0), 0);
+    /* A day counts once whether it held lifting, cardio, or both. */
+    const days = new Set(monthSessions.map(s=>s.date).concat(monthCardio.map(c=>c.date)));
+
     const tiles = [
-      { k:"Sessions this month", v: monthSessions.length, u:"logged workouts" },
-      { k:"Sets completed",      v: totalSets,            u:"checked off this month" },
-      { k:"Current streak",      v: currentStreak(),      u:"consecutive days" },
-      { k:"Most trained",        v: topCat ? CAT_LABEL[topCat] : "—", u: topCat ? `${catCount[topCat]} exercises` : "nothing logged yet" }
+      { k:"Days trained",   v: days.size,       u:"this month" },
+      { k:"Sets completed", v: totalSets,       u:"checked off this month" },
+      { k:"Current streak", v: currentStreak(), u:"consecutive days" },
+      cardioSec
+        ? { k:"Cardio", v: clock(cardioSec), u: `${monthCardio.length} session${monthCardio.length>1?"s":""} this month` }
+        : { k:"Most trained", v: topCat ? CAT_LABEL[topCat] : "—", u: topCat ? `${catCount[topCat]} exercises` : "nothing logged yet" }
     ];
     calStats.innerHTML = tiles.map(t=>
       `<div class="stat-tile"><div class="k">${t.k}</div><div class="v">${t.v}</div><div class="u">${t.u}</div></div>`).join("");
@@ -3228,14 +4105,16 @@
       const ds = ymd(new Date(y, m, day));
       const sess = sessionFor(ds);
       const cats = sess ? [...new Set(sess.items.map(i=>i.cat))].sort((a,b)=>CAT_ORDER.indexOf(a)-CAT_ORDER.indexOf(b)) : [];
+      const card = cardioFor(ds);
+      if(card.length) cats.push("cardio");
       const dots = cats.map(c=>`<span data-cat="${c}" style="background:var(--${c})" title="${CAT_LABEL[c]}"></span>`).join("");
       const cls = ["cal-cell"];
-      if(sess) cls.push("has-session");
+      if(sess || card.length) cls.push("has-session");
       if(ds === today) cls.push("today");
       if(ds === selectedDay) cls.push("selected");
       html += `<button type="button" class="${cls.join(" ")}" data-date="${ds}" data-focus="day-${ds}"
         aria-pressed="${ds === selectedDay}"${ds === today ? ' aria-current="date"' : ""}
-        aria-label="${prettyDate(ds)}${sess ? ", session logged" : ""}">
+        aria-label="${prettyDate(ds)}${(sess||card.length) ? ", " + cats.map(c=>CAT_LABEL[c]).join(' and ') + ' logged' : ""}">
         <span class="dnum">${day}</span><span class="cal-dots">${dots}</span></button>`;
     }
     calGrid.innerHTML = html;
@@ -3247,15 +4126,56 @@
     renderDayDetail();
   }
 
+  /* Cardio blocks for a day, rendered the same way the lifting items are so the
+     day reads as one session rather than two feeds. */
+  function cardioBlocks(dateStr){
+    return cardioFor(dateStr).map(c=>{
+      const m = machineByKey(c.machine);
+      const rows = (c.intervals || []).map((iv,n)=>
+        `${n+1}) ${esc(settingsText(m, iv.v || {}))} — ${esc(longClock(iv.sec))}`).join("<br>");
+      const short = c.doneSec < c.totalSec ? ` · stopped at ${clock(c.doneSec)}` : "";
+      return `<div class="sess-ex" style="--item-color: var(--cardio); --item-ink: var(--on-cardio)">
+        <div class="top">
+          <span class="nm">${esc(c.name || m.name)}</span>
+          <span class="badge">${esc(m.name)}</span>
+        </div>
+        <div class="setline">${clock(c.doneSec)}${short}<br>${rows}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function wireDeleteCardio(){
+    const btn = document.getElementById("delCardio");
+    if(!btn) return;
+    btn.addEventListener("click", ()=>{
+      const n = cardioFor(selectedDay).length;
+      if(!confirm(`Delete ${n} cardio session${n>1?"s":""} on ${prettyDate(selectedDay)}?`)) return;
+      cardioLog = cardioLog.filter(c=>c.date !== selectedDay);
+      persistCardioLog(); renderCalendar(); renderCardioHist();
+      showToast("Cardio deleted");
+    });
+  }
+
   function renderDayDetail(){
     const sess = sessionFor(selectedDay);
+    const card = cardioFor(selectedDay);
     if(!sess){
       dayDetail.innerHTML = `
         <h3>${prettyDate(selectedDay)}</h3>
-        <div class="dsub">No session logged on this day.</div>
-        <button type="button" class="btn" id="goTrain">Build a workout</button>`;
+        <div class="dsub">${card.length
+          ? `${card.length} cardio session${card.length>1?"s":""} · ${clock(card.reduce((a,c)=>a+(c.doneSec||0),0))}`
+          : "No session logged on this day."}</div>
+        ${cardioBlocks(selectedDay)}
+        <div class="form-actions">
+          <button type="button" class="btn" id="goTrain">Build a workout</button>
+          <button type="button" class="btn" id="goCardio">Cardio</button>
+          ${card.length ? `<button type="button" class="btn btn-danger" id="delCardio">Delete cardio</button>` : ""}
+        </div>`;
       const b = document.getElementById("goTrain");
       if(b) b.addEventListener("click", ()=> setView("train"));
+      const c2 = document.getElementById("goCardio");
+      if(c2) c2.addEventListener("click", ()=> setView("cardio"));
+      wireDeleteCardio();
       return;
     }
     const doneSets = sess.items.reduce((a,i)=> a + i.setLog.filter(s=>s.done).length, 0);
@@ -3264,7 +4184,7 @@
 
     dayDetail.innerHTML = `
       <h3>${prettyDate(selectedDay)}</h3>
-      <div class="dsub">${sess.items.length} exercise${sess.items.length>1?"s":""} · ${doneSets}/${totalSets} sets completed · ${cats.map(c=>CAT_LABEL[c]).join(" + ")}</div>
+      <div class="dsub">${sess.items.length} exercise${sess.items.length>1?"s":""} · ${doneSets}/${totalSets} sets completed · ${cats.map(c=>CAT_LABEL[c]).join(" + ")}${card.length ? ` + ${clock(card.reduce((a,c)=>a+(c.doneSec||0),0))} cardio` : ""}</div>
       ${sess.items.map(i=>`
         <div class="sess-ex" style="--item-color: var(--${i.cat}); --item-ink: var(--on-${i.cat})">
           <div class="top">
@@ -3273,10 +4193,13 @@
           </div>
           <div class="setline">${i.setLog.map((s,n)=> `S${n+1} ${esc(setLabel(s))}${s.done ? "✓" : ""}`).join("   ")}</div>
         </div>`).join("")}
+      ${cardioBlocks(selectedDay)}
       <div class="form-actions">
         <button type="button" class="btn" id="reloadSess">Load into workout tray</button>
         <button type="button" class="btn btn-danger" id="delSess">Delete this session</button>
+        ${card.length ? `<button type="button" class="btn btn-danger" id="delCardio">Delete cardio</button>` : ""}
       </div>`;
+    wireDeleteCardio();
 
     document.getElementById("reloadSess").addEventListener("click", ()=>{
       sess.items.forEach(i=>{
@@ -3589,10 +4512,19 @@
     units:"stUnits", weekStart:"stWeekStart", defaultSets:"stDefaultSets",
     defaultRest:"stDefaultRest", clearOnLog:"stClearOnLog"
   };
+  /* Two booleans behind one control, because "beep and vibrate" is how a person
+     thinks about it and two checkboxes is not. */
+  function cueChoice(){
+    if(settings.cardioSound && settings.cardioVibrate) return "both";
+    if(settings.cardioSound) return "sound";
+    if(settings.cardioVibrate) return "vibrate";
+    return "none";
+  }
   function fillSettingsForm(){
     Object.keys(stFields).forEach(k=>{
       document.getElementById(stFields[k]).value = settings[k];
     });
+    document.getElementById("stCardioCues").value = cueChoice();
   }
   document.getElementById("stSave").addEventListener("click", ()=>{
     settings.units       = document.getElementById("stUnits").value;
@@ -3600,6 +4532,9 @@
     settings.defaultSets = Math.max(1, Math.min(20, parseInt(document.getElementById("stDefaultSets").value,10) || 3));
     settings.defaultRest = Math.max(0, Math.min(600, parseInt(document.getElementById("stDefaultRest").value,10) || 0));
     settings.clearOnLog  = document.getElementById("stClearOnLog").value;
+    const cues = document.getElementById("stCardioCues").value;
+    settings.cardioSound   = cues === "both" || cues === "sound";
+    settings.cardioVibrate = cues === "both" || cues === "vibrate";
     save(KEY.settings, settings);
     fillSettingsForm();
     showToast("Settings saved");
@@ -4484,6 +5419,7 @@
   step("workout tray", renderTray);
   step("split loader", renderSplitLoader);
   step("record picker", populateLiftPicker);
+  step("cardio", renderCardio);
   step("account form", fillAccountForm);
   step("settings form", fillSettingsForm);
   step("share range", ()=> setRangeDays(30));

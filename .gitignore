@@ -16,3 +16,7 @@ _to_delete/
 push-to-play-data.json
 push-to-play-workout.txt
 push-to-play-log.txt
+
+# Copies the desktop app drops here when files are delivered into the chat —
+# duplicates of the real files above, not source.
+Claude outputs/

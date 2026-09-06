@@ -40,8 +40,31 @@ your own. One tap loads a day into the tray.
 | German Volume Training | 5 | Hypertrophy |
 | StrongLifts 5×5 | 3 | Strength |
 
+**Cardio** — strictly cardio, with an interval timer built around the fact that
+you cannot look at your phone while you are running. Pick a machine, and the
+interval rows take that machine's own dials:
+
+```
+Treadmill                          Stairmaster
+  Incline 3   Speed 2.5   2:30       Level 4    5:00
+  Incline 8   Speed 3.8  15:00       Level 8    2:00
+  Incline 10  Speed 4    10:00       Level 9    2:00
+  Incline 2   Speed 3.3   2:30       Level 10   1:00
+  Incline 15  Speed 2.5   6:00       Level 8    2:00
+  Incline 6   Speed 2.5   2:00       Level 12   1:00
+                          38:00      Level 6    2:00      15:00
+```
+
+Treadmill, stairmaster, indoor bike, rower, elliptical and jump rope are built
+in; add your own machine and name its dials whatever the console calls them.
+Running a plan beeps and buzzes at every change, shows the next interval's
+settings before you get there, and keeps the screen awake. Save a plan as a
+preset and it is one tap next time. Pause, skip and stop all work, and a run you
+stop early logs what you actually did.
+
 **Calendar** — every finished session lands on a day, dotted by the categories
-you trained. Pick a day to see exactly what you did.
+you trained, cardio included. Pick a day to see exactly what you did — sets and
+reps for lifting, interval by interval for cardio.
 
 **Records** — estimated one-rep max per lift, on the Epley formula
 (`weight × (1 + reps / 30)`), charted over time. Bench press, deadlift and
@@ -69,7 +92,8 @@ knowing:
 
 Keys are all prefixed `ptp-`: `ptp-tray`, `ptp-history`, `ptp-prs`,
 `ptp-splits`, `ptp-profile`, `ptp-settings`, `ptp-theme`, `ptp-active-split`,
-`ptp-custom-ex`, `ptp-custom-splits`.
+`ptp-custom-ex`, `ptp-custom-splits`, `ptp-cardio-plans`, `ptp-cardio-log`,
+`ptp-cardio-machines`.
 
 ---
 
@@ -174,12 +198,25 @@ Things that look like details and are not:
     dead and Settings → Reset, the only in-app way out, was unreachable. Init is
     also stepped, so one broken panel costs that panel and nothing else.
 
-13. **Category colours are two sets, not one.** The saturated hues are for a
+13. **Cardio is deliberately not a fifth entry in `CAT_ORDER`.** That constant
+    drives the exercise tiles, the muscle-group chips and the share codec's
+    catalogue indices; adding to it would shift every share code ever written.
+    Cardio is a calendar category only — it has its own store, its own data
+    shape (intervals with machine dials, not sets with weight and reps), and it
+    appears in `CAT_LABEL` so the calendar can name it.
+
+14. **The interval timer runs on wall-clock timestamps.** Decrementing a counter
+    per tick drifts over a 40-minute plan, and a backgrounded tab throttles the
+    ticks to nothing — with timestamps, returning to the app shows the right
+    time rather than however many callbacks fired. Overshoot at an interval
+    boundary is carried into the next one rather than discarded.
+
+15. **Category colours are two sets, not one.** The saturated hues are for a
     filled surface with white ink on it. `--push-ink` and friends are the same
     hues re-searched in OKLCH for 4.5:1 as *text*; deriving them by lifting
     luminance alone walks push-red and legs-gold back together under
     deuteranopia. Calendar dots carry category by colour alone, so they also
-    carry a shape — circle, square, diamond, bar.
+    carry a shape — circle, square, diamond, bar, triangle.
 
 ### The share format
 
