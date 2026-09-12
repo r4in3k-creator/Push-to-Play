@@ -16,6 +16,10 @@
      cached offline copy. A captive portal answers same-origin 200 with its own
      HTML, which is otherwise indistinguishable from a deploy. -->
 <meta name="ptp-app" content="push-to-play">
+<!-- Shown in Settings so you can tell at a glance which build you are on, and
+     what a device that is behaving oddly is actually running. Keep it in step
+     with VERSION in sw.js. -->
+<meta name="ptp-version" content="ptp-v10">
 <meta name="description" content="Push / Pull / Legs / Abs workout tracker — split templates, set-by-set logging, training calendar and personal records.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -1072,6 +1076,16 @@
     .new-machine-grid{ grid-template-columns:1fr; }
   }
 
+  /* ---- App version / update check ---- */
+  .ver-row{ display:flex; gap:26px; flex-wrap:wrap; margin:14px 0 15px; }
+  .ver-now{ display:flex; flex-direction:column; gap:3px; }
+  .ver-k{ font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); }
+  .ver-v{ font-family:'JetBrains Mono',monospace; font-size:13px; }
+  .ver-status{ font-size:12.5px; color: var(--text-dim); margin:11px 0 0; min-height:1.2em; }
+  .ver-status.good{ color: var(--abs-ink); }
+  .ver-status.bad{ color: var(--danger); }
+  .ver-status.busy{ color: var(--text-faint); }
+
   /* ================= Phone sizing =================
      This block is deliberately last in the stylesheet. Nearly every rule it
      narrows is declared further up, and at equal specificity the later rule
@@ -1692,6 +1706,31 @@
           </div>
         </div>
 
+        <!-- ---- App version ---- -->
+        <div class="panel share-card" id="updateCard">
+          <h3>App version</h3>
+          <p class="lede">This app updates itself from the copy published on GitHub
+             Pages. It checks each time you open it with a signal — press the button
+             to check right now.</p>
+
+          <div class="ver-row">
+            <div class="ver-now">
+              <span class="ver-k">Running</span>
+              <span class="ver-v" id="verNow">—</span>
+            </div>
+            <div class="ver-now">
+              <span class="ver-k">Last checked</span>
+              <span class="ver-v" id="verChecked">never</span>
+            </div>
+          </div>
+
+          <div class="share-actions">
+            <button type="button" class="btn btn-primary" id="checkUpdateBtn">Check for updates</button>
+            <button type="button" class="btn btn-primary" id="applyUpdateBtn" hidden>Reload to update</button>
+          </div>
+          <p class="ver-status" id="verStatus" role="status" aria-live="polite"></p>
+        </div>
+
         <!-- ---- Install ---- -->
         <div class="panel share-card" id="installCard" hidden>
           <h3>Install on this device</h3>
@@ -2241,7 +2280,8 @@
 
   /* ================= App state ================= */
   const DEFAULT_SETTINGS = { units:"kg", weekStart:1, defaultSets:3, defaultRest:90,
-                             clearOnLog:"clear", cardioSound:true, cardioVibrate:true };
+                             clearOnLog:"clear", cardioSound:true, cardioVibrate:true,
+                             lastUpdateCheck:"" };
   const DEFAULT_PROFILE  = { name:"", email:"", bodyweight:"", height:"", goal:"", started:"", experience:"intermediate" };
   const DEFAULT_LIFTS = [
     { key:"bench",    name:"Barbell Bench Press", cat:"push", entries:[] },
@@ -2452,7 +2492,7 @@
     if(view === "cardio" && !run) renderCardio();
     if(view === "records")  renderRecords();
     if(view === "account")  fillAccountForm();
-    if(view === "settings"){ fillSettingsForm(); renderShare(); refreshInstallCard(); }
+    if(view === "settings"){ fillSettingsForm(); renderShare(); refreshInstallCard(); renderVersion(); }
     syncTrayFab();
     window.scrollTo({top:0, behavior:"instant"});
   }
@@ -5364,6 +5404,151 @@
     });
   }
 
+
+  /* ================= Update check =================
+     The app is a single HTML file on GitHub Pages, so "is there a new version"
+     is answerable exactly: fetch the published page and compare it byte for byte
+     with the copy this device is running. That is stricter than trusting a
+     version string — it catches a deploy even if the version was not bumped —
+     and it needs no server, no API and no account.
+
+     Two things can be stale, and they update differently:
+       index.html  the app itself. The worker is network-first, so a reload with
+                   signal already picks it up; the check just tells you to reload.
+       sw.js       the worker. Only the browser can replace it, via update().
+     The button does both. */
+
+  const VER = (document.querySelector('meta[name="ptp-version"]') || {}).content || "unknown";
+
+  const verStatus = document.getElementById("verStatus");
+  const checkBtn  = document.getElementById("checkUpdateBtn");
+  const applyBtn  = document.getElementById("applyUpdateBtn");
+
+  function setVerStatus(msg, kind){
+    verStatus.textContent = msg;
+    verStatus.className = "ver-status" + (kind ? " " + kind : "");
+  }
+  function relTime(iso){
+    if(!iso) return "never";
+    const secs = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+    if(secs < 60)    return "just now";
+    if(secs < 3600)  return Math.floor(secs/60) + " min ago";
+    if(secs < 86400) return Math.floor(secs/3600) + "h ago";
+    return Math.floor(secs/86400) + "d ago";
+  }
+  function renderVersion(){
+    document.getElementById("verNow").textContent = VER;
+    document.getElementById("verChecked").textContent = relTime(settings.lastUpdateCheck);
+  }
+
+  /* The published copy of the page, bypassing every cache between here and it —
+     the HTTP cache, and the service worker, which would otherwise answer from
+     the very copy we are trying to compare against. */
+  function fetchPublished(){
+    const url = new URL("index.html", location.href);
+    url.searchParams.set("_ptp", Date.now());   // defeats a CDN that ignores no-store
+    return fetch(url.toString(), { cache: "no-store" }).then(res=>{
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      return res.text();
+    });
+  }
+  /* What this device is actually running: the worker's cached shell. Comparing
+     against document.documentElement.outerHTML would not work — the script has
+     been mutating that since load. */
+  function cachedShellText(){
+    if(!("caches" in window)) return Promise.resolve(null);
+    return caches.match(new URL("index.html", location.href).toString())
+      .then(r => r ? r.text() : caches.match("./index.html").then(r2 => r2 ? r2.text() : null))
+      .catch(()=> null);
+  }
+
+  let pendingUpdate = null;   // the fetched HTML, held so Reload can prime the cache
+
+  function showUpdateFound(text, note){
+    pendingUpdate = text;
+    applyBtn.hidden = false;
+    document.getElementById("updateWarn").hidden = false;
+    setVerStatus(note || "A new version is available.", "good");
+  }
+
+  function markChecked(){
+    settings.lastUpdateCheck = new Date().toISOString();
+    save(KEY.settings, settings);
+    renderVersion();
+  }
+
+  /* quiet: a check on launch, which must never interrupt or blame the user for
+     being offline. Loud: the button, which owes an answer either way. */
+  function checkForUpdate(loud){
+    if(loud){
+      checkBtn.disabled = true;
+      setVerStatus("Checking…", "busy");
+    }
+
+    /* Ask the browser to re-fetch sw.js too. A changed worker fires updatefound,
+       which raises the banner on its own. */
+    if(navigator.serviceWorker && navigator.serviceWorker.getRegistration){
+      navigator.serviceWorker.getRegistration()
+        .then(reg=>{ if(reg) return reg.update(); })
+        .catch(()=>{});
+    }
+
+    return Promise.all([fetchPublished(), cachedShellText()])
+      .then(([fresh, cached])=>{
+        markChecked();
+        const changed = cached ? (fresh !== cached) : false;
+        const newVer = (fresh.match(/name="ptp-version"\s+content="([^"]+)"/) || [])[1];
+
+        if(changed || (newVer && newVer !== VER)){
+          showUpdateFound(fresh, newVer && newVer !== VER
+            ? `Version ${newVer} is available — you have ${VER}.`
+            : "A new version is available.");
+          return "update";
+        }
+        if(!cached){
+          /* Nothing cached to compare with — the worker has not taken over yet.
+             Version strings are all we have, and they match. */
+          if(loud) setVerStatus("You're on the latest version.", "good");
+          return "same";
+        }
+        if(loud) setVerStatus("You're on the latest version.", "good");
+        applyBtn.hidden = true;
+        return "same";
+      })
+      .catch((e)=>{
+        if(loud){
+          setVerStatus(navigator.onLine
+            ? "Couldn't reach the server. If you just pushed, GitHub Pages can take a minute to publish."
+            : "You're offline — connect and try again.", "bad");
+        }
+        return "error";
+      })
+      .then((r)=>{ if(loud) checkBtn.disabled = false; return r; });
+  }
+
+  checkBtn.addEventListener("click", ()=> checkForUpdate(true));
+
+  applyBtn.addEventListener("click", ()=>{
+    /* Prime the worker's cache with the copy we already fetched, so the reload
+       lands on the new version even if the network drops in between. */
+    const prime = (pendingUpdate && "caches" in window)
+      ? caches.keys().then(keys=>{
+          const k = keys.find(x=>x.indexOf("ptp-") === 0);
+          if(!k) return;
+          return caches.open(k).then(c=> c.put("./index.html",
+            new Response(pendingUpdate, { headers: { "Content-Type": "text/html; charset=utf-8" } })));
+        }).catch(()=>{})
+      : Promise.resolve();
+    prime.then(()=> location.reload());
+  });
+
+  /* A quiet check once per launch, so "press the button" is a fallback rather
+     than the only way an update is ever noticed. Deferred so it never competes
+     with first paint. */
+  if(location.protocol === "http:" || location.protocol === "https:"){
+    setTimeout(()=>{ checkForUpdate(false); }, 3000);
+  }
+
   /* ================= Toast ================= */
   let toastTimer = null;
   function showToast(msg){
@@ -5424,6 +5609,7 @@
   step("settings form", fillSettingsForm);
   step("share range", ()=> setRangeDays(30));
   step("share", renderShare);
+  step("version", renderVersion);
   step("view", ()=> setView("train"));
   updateStorageWarning();
 

@@ -97,6 +97,23 @@ Keys are all prefixed `ptp-`: `ptp-tray`, `ptp-history`, `ptp-prs`,
 
 ---
 
+## Keeping it up to date
+
+Settings → **App version** shows the build you are running and a **Check for
+updates** button. The app also checks quietly a few seconds after every launch
+that has a signal, so the button is a way to hurry it rather than the only way
+an update is ever noticed. When one is found, a banner offers a reload.
+
+The check does not trust a version string: it fetches the published page and
+compares it byte for byte against the copy the service worker has cached. That
+catches a deploy even if `VERSION` was not bumped. It also calls
+`registration.update()`, which is the only way a changed `sw.js` can be picked
+up. Pressing reload primes the cache with the copy it already fetched, so the
+new version lands even if the connection drops in between.
+
+After a `git push`, GitHub Pages takes up to a minute or so to publish before
+the check will see it.
+
 ## Installing it as an app
 
 Open the live URL, then:
@@ -182,36 +199,41 @@ Things that look like details and are not:
    real work in landscape, where the island and the rounded corners are on the
    left and right.
 
-10. **Bump `VERSION` in `sw.js` on every change.** Installed copies serve from
+10. **`<meta name="ptp-version">` and `VERSION` in `sw.js` must stay in step.**
+    The meta is what Settings displays and what the update check names in
+    "version X is available". The comparison itself is a byte compare and does
+    not depend on it, so a mismatch degrades the message, not the mechanism.
+
+11. **Bump `VERSION` in `sw.js` on every change.** Installed copies serve from
     the old cache until the version string changes.
 
-11. **The service worker only caches a response that proves it is this page.**
+12. **The service worker only caches a response that proves it is this page.**
     A captive portal answers a same-origin GET with 200 and its own sign-in HTML,
     which status and type cannot tell apart from a deploy — and caching it
     replaces the offline app with the portal, permanently. The page carries a
     `<meta name="ptp-app">` sentinel and the worker checks for it before writing
     the shell. Do not remove that meta tag.
 
-12. **`load()` takes a shape validator, and every call site passes one.**
+13. **`load()` takes a shape validator, and every call site passes one.**
     `JSON.parse` succeeding says nothing about shape. One wrong-typed value used
     to throw during init, before any listener was attached — so the tabs went
     dead and Settings → Reset, the only in-app way out, was unreachable. Init is
     also stepped, so one broken panel costs that panel and nothing else.
 
-13. **Cardio is deliberately not a fifth entry in `CAT_ORDER`.** That constant
+14. **Cardio is deliberately not a fifth entry in `CAT_ORDER`.** That constant
     drives the exercise tiles, the muscle-group chips and the share codec's
     catalogue indices; adding to it would shift every share code ever written.
     Cardio is a calendar category only — it has its own store, its own data
     shape (intervals with machine dials, not sets with weight and reps), and it
     appears in `CAT_LABEL` so the calendar can name it.
 
-14. **The interval timer runs on wall-clock timestamps.** Decrementing a counter
+15. **The interval timer runs on wall-clock timestamps.** Decrementing a counter
     per tick drifts over a 40-minute plan, and a backgrounded tab throttles the
     ticks to nothing — with timestamps, returning to the app shows the right
     time rather than however many callbacks fired. Overshoot at an interval
     boundary is carried into the next one rather than discarded.
 
-15. **Category colours are two sets, not one.** The saturated hues are for a
+16. **Category colours are two sets, not one.** The saturated hues are for a
     filled surface with white ink on it. `--push-ink` and friends are the same
     hues re-searched in OKLCH for 4.5:1 as *text*; deriving them by lifting
     luminance alone walks push-red and legs-gold back together under
