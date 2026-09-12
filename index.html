@@ -19,7 +19,7 @@
 <!-- Shown in Settings so you can tell at a glance which build you are on, and
      what a device that is behaving oddly is actually running. Keep it in step
      with VERSION in sw.js. -->
-<meta name="ptp-version" content="ptp-v10">
+<meta name="ptp-version" content="ptp-v11">
 <meta name="description" content="Push / Pull / Legs / Abs workout tracker — split templates, set-by-set logging, training calendar and personal records.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -745,12 +745,70 @@
   .new-ex-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
   @media (max-width:560px){ .new-ex-grid{ grid-template-columns:1fr; } }
   .badge.custom-badge{ color: var(--group-text, var(--group-color)); border-color: var(--group-color); }
-  .card .del-custom{
-    flex:none; width:22px; height:22px; border-radius:6px; border:1px solid var(--border);
-    background: var(--surface-2); color: var(--text-faint); font-size:12px; line-height:1; cursor:pointer;
+  /* ---- Exercise card menu and editor ----
+     The delete control used to be a 22px × sitting 10px from the 30px +. Two
+     targets that close, one of them irreversible, on a list you scroll with your
+     thumb mid-set. The menu moved to the opposite end of the card, beside the
+     name, and delete now lives two taps deep inside it. */
+  .card .name-row{ display:flex; align-items:center; gap:7px; }
+  .card .name{ min-width:0; }
+  .ex-menu-btn{
+    flex:none; width:26px; height:26px; border-radius:7px;
+    border:1px solid transparent; background:none; color: var(--text-faint);
+    font-size:15px; line-height:1; letter-spacing:1px; cursor:pointer;
     display:flex; align-items:center; justify-content:center;
   }
-  .card .del-custom:hover{ color: var(--danger); border-color: var(--danger); }
+  .ex-menu-btn:hover{ color: var(--text); border-color: var(--border-strong); }
+  .ex-menu-btn[aria-expanded="true"]{
+    color: var(--text); background: var(--surface-3); border-color: var(--border-strong);
+  }
+  .note-badge{ cursor:help; }
+
+  .card-shell{ display:flex; flex-direction:column; }
+  .card-shell .card{ border-bottom-left-radius:0; border-bottom-right-radius:0; border-bottom-color:transparent; }
+  .ex-editor{
+    background: var(--surface-2); border:1px solid var(--border);
+    border-top:none; border-radius:0 0 var(--radius) var(--radius);
+    padding:14px 13px 13px;
+  }
+  .ed-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px; }
+  .ed-head h4{ font-size:13px; font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.04em; }
+  .ed-close{
+    flex:none; border:1px solid var(--border-strong); background: var(--surface);
+    color: var(--text-dim); border-radius:7px; padding:5px 12px; font-size:11.5px;
+    cursor:pointer; font-family:inherit;
+  }
+  .ed-close:hover{ color: var(--text); }
+  .ed-grid{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:11px; margin-bottom:12px; }
+  .ed-grid .field.wide{ grid-column:1 / -1; }
+  .ed-grid .field{ display:flex; flex-direction:column; gap:5px; font-size:11px;
+    text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); }
+  .ed-grid input, .ed-grid select, .ed-grid textarea{
+    background: var(--surface); border:1px solid var(--border-strong); border-radius:7px;
+    color: var(--text); padding:8px 10px; font-size:13px; font-family:inherit;
+    text-transform:none; letter-spacing:0; width:100%; resize:vertical;
+  }
+  .ed-grid .hint{ font-size:10.5px; color: var(--text-faint); text-transform:none; letter-spacing:0; }
+  .ed-locked{ font-size:12px; color: var(--text-dim); margin:0 0 12px; max-width:60ch; }
+  .ed-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  /* Pushed to its own end of the row: it is the one action here that cannot be undone. */
+  .ed-danger{ margin-left:auto; }
+  .ed-note{ font-size:11px; color: var(--text-faint); margin:10px 0 0; }
+
+  .archived-pill{
+    display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color: var(--text-dim);
+    background: var(--surface); border:1px dashed var(--border-strong); border-radius:999px;
+    padding:6px 13px; cursor:pointer; font-family:inherit; margin-bottom:12px;
+  }
+  .archived-pill:hover{ color: var(--text); border-color: var(--text-faint); }
+  .archived-pill.on{ border-style:solid; color: var(--text); }
+  .card.is-archived{ opacity:.62; border-style:dashed; }
+
+  /* the cue, where it is actually needed: on the exercise, mid-workout */
+  .tray-item .item-note{
+    font-size:11.5px; color: var(--text-dim); margin-top:6px; line-height:1.45;
+    padding-left:8px; border-left:2px solid var(--border-strong);
+  }
 
   /* ================= Splits ================= */
   .split-tile.make-new{
@@ -1173,6 +1231,12 @@
     .group{ margin-bottom: 18px; }
     .group-head h3{ font-size: 13.5px; }
 
+    /* Four fields two-up is ~160px each here, which is not a text field. */
+    .ed-grid{ grid-template-columns: 1fr; gap: 10px; }
+    .ex-editor{ padding: 12px 11px; }
+    .ed-danger{ margin-left: 0; width: 100%; }
+    .ed-actions .btn{ flex: 1 1 auto; }
+
     /* --- Workout mode. The browse column is an empty grid cell here, so its
        gap is dead space above the tray. --- */
     .layout{ gap: 14px; }
@@ -1364,6 +1428,7 @@
         <button type="button" class="all-pill active" id="allPill" aria-pressed="true">All categories</button>
         <div class="tiles" id="tiles"></div>
         <div class="subgroups" id="subgroups" hidden></div>
+        <button type="button" class="archived-pill" id="archivedPill" hidden aria-pressed="false"></button>
 
         <div class="toolbar">
           <input class="search" id="search" type="text" aria-label="Search exercises" placeholder="Search exercises… (e.g. curl, squat, cable)">
@@ -2174,7 +2239,7 @@
                 splits:"ptp-splits", activeSplit:"ptp-active-split",
                 customEx:"ptp-custom-ex", customSplits:"ptp-custom-splits",
                 cardioPlans:"ptp-cardio-plans", cardioLog:"ptp-cardio-log",
-                cardioMachines:"ptp-cardio-machines" };
+                cardioMachines:"ptp-cardio-machines", exPrefs:"ptp-ex-prefs" };
 
   /* Everything here comes back from storage that an older version of this app
      wrote, that a sync tool touched, or that a user pasted in by hand. JSON.parse
@@ -2319,16 +2384,53 @@
 
   function slug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "x"; }
 
+  /* A custom exercise's id used to be derived from its name, which made renaming
+     one quietly destructive: every tray item, logged session, personal record and
+     split day points at the id, and changing the name changed the id out from
+     under all of them. The uid is assigned once and never moves. Entries written
+     before it existed adopt their current slug as the uid, so their ids — and
+     everything referencing those ids — survive the upgrade unchanged. */
+  function ensureCustomUids(){
+    let touched = false;
+    customEx.forEach(c=>{
+      if(!c.uid){ c.uid = slug(c.n); touched = true; }
+    });
+    if(touched) persistCustomEx();
+  }
+
   function mountCustomEx(){
     /* drop any previously mounted customs, then re-append from storage */
     EX.length = BUILTIN_EX_COUNT;
     customEx.forEach(c=>{
       EX.push({ n:c.n, cat:c.cat, g:c.g || "Custom", eq:c.eq || "Other",
-                url:c.url || "", id:"cx-"+slug(c.n), custom:true });
+                url:c.url || "", id:"cx-"+(c.uid || slug(c.n)), custom:true, uid:c.uid });
     });
   }
   function persistCustomEx(){ save(KEY.customEx, customEx); }
   function isCustomName(name){ return customEx.some(c=>c.n === name); }
+
+  /* ---- Per-exercise preferences ----
+     Notes, default sets and rest, and the archived flag, keyed by exercise id.
+     Deliberately separate from customEx: these apply to the 92 built-ins too,
+     and a built-in is not the user's row to edit. Keeping them apart also means
+     a pref can never change what a share code means — codes carry catalogue
+     indices and names, never anything from here. */
+  let exPrefs = load(KEY.exPrefs, {}, isObj);
+  function persistExPrefs(){ save(KEY.exPrefs, exPrefs); }
+  function prefFor(id){ return (isObj(exPrefs[id]) ? exPrefs[id] : {}); }
+  function setPref(id, patch){
+    const cur = Object.assign({}, prefFor(id), patch);
+    /* Do not keep a row that says nothing — an empty note and unset defaults are
+       the absence of a preference, not a preference. */
+    Object.keys(cur).forEach(k=>{
+      if(cur[k] === "" || cur[k] === null || cur[k] === undefined || cur[k] === false) delete cur[k];
+    });
+    if(Object.keys(cur).length) exPrefs[id] = cur; else delete exPrefs[id];
+    persistExPrefs();
+  }
+  function isArchived(id){ return !!prefFor(id).archived; }
+  function archivedCount(){ return EX.filter(e=> isArchived(e.id)).length; }
+  ensureCustomUids();
   mountCustomEx();
 
   /* ---- Splits the user built themselves ---- */
@@ -2357,13 +2459,20 @@
 
   /* ================= Tray model ================= */
   function makeTrayItem(ex, setsOverride){
-    const sets = Math.max(1, setsOverride || parseInt(settings.defaultSets,10) || 3);
+    /* A per-exercise default beats the global one: three sets and ninety seconds
+       is right for curls and wrong for heavy squats, and setting it by hand every
+       session is what the per-exercise value exists to stop. */
+    const pref = prefFor(ex.id);
+    const sets = Math.max(1, setsOverride || parseInt(pref.sets,10) || parseInt(settings.defaultSets,10) || 3);
+    const rest = (pref.rest === 0 || parseInt(pref.rest,10) >= 0)
+      ? parseInt(pref.rest,10)
+      : (parseInt(settings.defaultRest,10) || 0);
     return {
       id: ex.id, n: ex.n, cat: ex.cat, eq: ex.eq,
       sets,
       setLog: Array.from({length: sets}, ()=>({reps:"", weight:"", done:false})),
       expanded: false,
-      restSeconds: parseInt(settings.defaultRest,10) || 0,
+      restSeconds: isFinite(rest) ? rest : (parseInt(settings.defaultRest,10) || 0),
       supersetId: null
     };
   }
@@ -2580,6 +2689,8 @@
   });
 
   const groupsEl = document.getElementById("groups");
+  let editingEx = null;      // the exercise whose editor is open
+  let showArchived = false;
   function renderGroups__body(){
     groupsEl.innerHTML = "";
     const cats = activeCat ? [activeCat] : CAT_ORDER;
@@ -2591,6 +2702,9 @@
       if(activeGroup) groups = groups.filter(g=> g === activeGroup);
       groups.forEach(sg=>{
         let items = inCat.filter(e=>e.g===sg);
+        /* Archived exercises drop out of the directory but stay in EX, so every
+           logged session, record and split day that points at one still resolves. */
+        if(!showArchived) items = items.filter(e=> !isArchived(e.id));
         if(equip) items = items.filter(e=>e.eq===equip);
         if(query) items = items.filter(e=>e.n.toLowerCase().includes(query));
         if(!items.length) return;
@@ -2607,27 +2721,51 @@
         wrap.className = "cards";
         items.forEach(ex=>{
           const inTray = tray.some(t=>t.id===ex.id);
+          const pref = prefFor(ex.id);
+          const note = pref.note || "";
           const card = document.createElement("div");
-          card.className = "card";
+          card.className = "card" + (isArchived(ex.id) ? " is-archived" : "");
           const link = ex.custom
             ? (ex.url ? `<a class="xrx" href="${esc(ex.url)}" target="_blank" rel="noopener">reference ↗</a>` : "")
             : `<a class="xrx" href="${ex.url}" target="_blank" rel="noopener">exrx.net ↗</a>`;
           card.innerHTML = `
             <div class="info">
-              <div class="name">${esc(ex.n)}</div>
+              <div class="name-row">
+                <span class="name">${esc(ex.n)}</span>
+                <button type="button" class="ex-menu-btn" data-focus="menu-${esc(ex.id)}"
+                        aria-expanded="${editingEx === ex.id}"
+                        aria-label="Options for ${esc(ex.n)}">⋯</button>
+              </div>
               <div class="meta">
                 <span class="badge">${esc(ex.eq)}</span>
                 ${ex.custom ? `<span class="badge custom-badge">Yours</span>` : ""}
+                ${note ? `<span class="badge note-badge" title="${esc(note)}">✎ note</span>` : ""}
+                ${pref.sets || pref.rest != null ? `<span class="badge">${pref.sets ? pref.sets + "×" : ""}${pref.rest != null ? " " + formatTime(pref.rest) : ""}</span>` : ""}
                 ${link}
               </div>
             </div>
-            ${ex.custom ? `<button type="button" class="del-custom" aria-label="Delete ${esc(ex.n)}">×</button>` : ""}
             <button type="button" class="add-btn${inTray ? " added" : ""}" aria-pressed="${inTray}"
                   data-focus="add-${esc(ex.id)}"
                   aria-label="${inTray ? "Remove" : "Add"} ${esc(ex.n)} ${inTray ? "from" : "to"} your workout">${inTray ? "✓" : "+"}</button>`;
           card.querySelector(".add-btn").addEventListener("click", ()=> toggleTray(ex));
-          const del = card.querySelector(".del-custom");
-          if(del) del.addEventListener("click", ()=> deleteCustomExercise(ex));
+          card.querySelector(".ex-menu-btn").addEventListener("click", ()=>{
+            editingEx = (editingEx === ex.id) ? null : ex.id;
+            renderGroups();
+          });
+          /* The editor is a block in the flow, not a popover. A floating panel
+             over a list of cards covers the rows underneath it, which is the
+             same mistake the tray's ⋯ menu made once already. */
+          if(editingEx === ex.id){
+            const ed = document.createElement("div");
+            ed.className = "ex-editor";
+            buildExEditor(ed, ex);
+            const shell = document.createElement("div");
+            shell.className = "card-shell";
+            shell.appendChild(card);
+            shell.appendChild(ed);
+            wrap.appendChild(shell);
+            return;
+          }
           wrap.appendChild(card);
         });
         group.appendChild(wrap);
@@ -2638,6 +2776,200 @@
     if(!anyResults){
       groupsEl.innerHTML = `<div class="empty-state">No exercises match “${esc(query || equip)}”. Try clearing the search or equipment filter.</div>`;
     }
+    renderArchivedPill();
+  }
+
+  /* Archiving is only safe to offer if it is also easy to undo, which means the
+     hidden ones have to be findable. */
+  function renderArchivedPill(){
+    const pill = document.getElementById("archivedPill");
+    const n = archivedCount();
+    pill.hidden = n === 0;
+    if(!n){ showArchived = false; return; }
+    pill.textContent = showArchived ? `Hiding ${n} archived again` : `${n} archived — show`;
+    pill.classList.toggle("on", showArchived);
+    pill.setAttribute("aria-pressed", String(showArchived));
+  }
+  document.getElementById("archivedPill").addEventListener("click", ()=>{
+    showArchived = !showArchived;
+    editingEx = null;
+    renderGroups();
+  });
+
+
+  /* ---- The exercise editor ----
+     Two tiers, because the 92 built-ins are a shared catalogue: anyone can attach
+     their own notes and defaults to one, but renaming or recategorising it would
+     desync it from the share codec, which addresses built-ins by catalogue index.
+     Name, category, group and equipment are therefore editable only on exercises
+     the user added. Archive and the preferences work on everything. */
+  const REST_CHOICES = [
+    { v:"", label:"Use my default (" + (parseInt(settings.defaultRest,10) || 0) + "s)" },
+    { v:"0",   label:"No timer" },
+    { v:"45",  label:"0:45" },
+    { v:"60",  label:"1:00" },
+    { v:"90",  label:"1:30" },
+    { v:"120", label:"2:00" },
+    { v:"180", label:"3:00" },
+    { v:"300", label:"5:00" }
+  ];
+
+  function buildExEditor(root, ex){
+    const pref = prefFor(ex.id);
+    const archived = !!pref.archived;
+    const groupOptions = [...new Set(EX.filter(e=>e.cat === ex.cat).map(e=>e.g))];
+
+    root.innerHTML = `
+      <div class="ed-head">
+        <h4>${esc(ex.n)}</h4>
+        <button type="button" class="ed-close" aria-label="Close options">Done</button>
+      </div>
+
+      ${ex.custom ? `
+      <div class="ed-grid">
+        <label class="field">Name
+          <input type="text" id="edName" maxlength="60" value="${esc(ex.n)}">
+        </label>
+        <label class="field">Category
+          <select id="edCat">
+            ${CAT_ORDER.map(c=>`<option value="${c}"${c===ex.cat?" selected":""}>${CAT_LABEL[c]}</option>`).join("")}
+          </select>
+        </label>
+        <label class="field">Muscle group
+          <input type="text" id="edGroup" list="edGroupList" maxlength="40" value="${esc(ex.g)}">
+          <datalist id="edGroupList">${groupOptions.map(g=>`<option value="${esc(g)}">`).join("")}</datalist>
+        </label>
+        <label class="field">Equipment
+          <input type="text" id="edEq" list="equipList" maxlength="30" value="${esc(ex.eq)}">
+        </label>
+      </div>` : `
+      <p class="ed-locked">This one is from the ExRx directory, so its name and
+         category stay put — share codes identify it by its place in that list.
+         Your notes and defaults below are yours alone.</p>`}
+
+      <div class="ed-grid">
+        <label class="field wide">Notes and setup cues
+          <textarea id="edNote" rows="2" maxlength="280"
+            placeholder="Seat 4, pin 7, elbows tucked…">${esc(pref.note || "")}</textarea>
+          <span class="hint">Shown on the exercise while it's in your workout.</span>
+        </label>
+        <label class="field">Default sets
+          <input type="text" inputmode="numeric" id="edSets" maxlength="2"
+                 value="${esc(pref.sets || "")}" placeholder="${parseInt(settings.defaultSets,10) || 3}">
+        </label>
+        <label class="field">Default rest
+          <select id="edRest">
+            ${REST_CHOICES.map(r=>{
+              const cur = (pref.rest == null) ? "" : String(pref.rest);
+              return `<option value="${r.v}"${r.v === cur ? " selected" : ""}>${esc(r.label)}</option>`;
+            }).join("")}
+          </select>
+        </label>
+      </div>
+
+      <div class="ed-actions">
+        <button type="button" class="btn btn-primary" id="edSave">Save changes</button>
+        <button type="button" class="btn" id="edArchive">${archived ? "Bring back to the directory" : "Archive — hide from the list"}</button>
+        ${ex.custom ? `<button type="button" class="btn btn-danger ed-danger" id="edDelete">Delete for good</button>` : ""}
+      </div>
+      <p class="ed-note">${archived
+        ? "Archived. It stays in your history and records — it just isn't in the list."
+        : "Archiving hides it without touching anything you've already logged."}</p>
+    `;
+
+    root.querySelector(".ed-close").addEventListener("click", ()=>{ editingEx = null; renderGroups(); });
+
+    root.querySelector("#edArchive").addEventListener("click", ()=>{
+      setPref(ex.id, { archived: !archived });
+      editingEx = null;
+      renderGroups(); renderTiles(); renderSubgroups();
+      showToast(archived ? `${ex.n} is back in the directory` : `${ex.n} archived`);
+    });
+
+    root.querySelector("#edSave").addEventListener("click", ()=> saveExEditor(ex, root));
+
+    const del = root.querySelector("#edDelete");
+    if(del) del.addEventListener("click", ()=> deleteCustomExercise(ex));
+  }
+
+  function saveExEditor(ex, root){
+    const noteEl = root.querySelector("#edNote");
+    const setsEl = root.querySelector("#edSets");
+    const restEl = root.querySelector("#edRest");
+
+    const rawSets = String(setsEl.value).trim();
+    const sets = /^\d{1,2}$/.test(rawSets) ? Math.max(1, Math.min(20, parseInt(rawSets,10))) : "";
+    const rest = restEl.value === "" ? null : parseInt(restEl.value,10);
+
+    setPref(ex.id, {
+      note: noteEl.value.trim(),
+      sets: sets || "",
+      /* 0 is a real choice — "no timer" — so it cannot be dropped as falsy the
+         way setPref drops an empty note. Stored as a string for that reason. */
+      rest: rest === null ? "" : String(rest)
+    });
+
+    if(ex.custom){
+      const rec = customEx.find(c=>(c.uid || slug(c.n)) === ex.uid);
+      if(rec){
+        const newName = root.querySelector("#edName").value.trim();
+        const newCat  = root.querySelector("#edCat").value;
+        const newG    = root.querySelector("#edGroup").value.trim() || "Custom";
+        const newEq   = root.querySelector("#edEq").value.trim() || "Other";
+
+        if(!newName){ showToast("Give the exercise a name"); return; }
+        const clash = EX.some(e=> e.id !== ex.id && e.n.toLowerCase() === newName.toLowerCase());
+        if(clash){ showToast(`"${newName}" is already in the directory`); return; }
+
+        const renamed = newName !== rec.n;
+        rec.n = newName; rec.cat = CAT_ORDER.includes(newCat) ? newCat : rec.cat;
+        rec.g = newG; rec.eq = newEq;
+        persistCustomEx();
+        mountCustomEx();
+
+        /* The id is stable across a rename, so nothing needs repointing — but the
+           name is copied into tray items, logged sessions and split days at the
+           time they were made, and those copies are what the app displays. */
+        if(renamed) renameEverywhere(ex.id, ex.n, newName);
+      }
+    }
+
+    editingEx = null;
+    refreshExerciseLists();
+    renderTiles(); renderSubgroups(); renderGroups(); renderTray();
+    showToast("Saved");
+  }
+
+  /* A rename has to reach every place the old name was copied to. History is
+     included deliberately: a session that says "Incline Press" when the exercise
+     is now called something else reads as a different exercise. */
+  function renameEverywhere(id, oldName, newName){
+    tray.forEach(t=>{ if(t.id === id) t.n = newName; });
+    persistTray();
+
+    let touchedHistory = false;
+    history.forEach(h=> (h.items || []).forEach(i=>{
+      if(i.id === id){ i.n = newName; touchedHistory = true; }
+    }));
+    if(touchedHistory) save(KEY.history, history);
+
+    let touchedLifts = false;
+    lifts.forEach(l=>{ if(l.name === oldName){ l.name = newName; touchedLifts = true; } });
+    if(touchedLifts) persistLifts();
+
+    /* Split days store exercise names, not ids. */
+    let touchedSplits = false;
+    Object.keys(splitEdits).forEach(k=>{
+      (splitEdits[k] || []).forEach(d=>{
+        if(!Array.isArray(d.ex)) return;
+        d.ex = d.ex.map(n=>{ if(n === oldName){ touchedSplits = true; return newName; } return n; });
+      });
+    });
+    customSplits.forEach(sp=> (sp.days || []).forEach(d=>{
+      if(!Array.isArray(d.ex)) return;
+      d.ex = d.ex.map(n=>{ if(n === oldName){ touchedSplits = true; return newName; } return n; });
+    }));
+    if(touchedSplits){ save(KEY.splits, splitEdits); persistCustomSplits(); }
   }
 
   /* ================= Custom exercises ================= */
@@ -2688,7 +3020,8 @@
     }
     if(url && !/^https?:\/\//i.test(url)){ showToast("The link needs to start with http:// or https://"); return; }
 
-    customEx.push({ n:name, cat, g, eq, url });
+    customEx.push({ uid: slug(name) + "-" + Math.random().toString(36).slice(2,6),
+                     n:name, cat, g, eq, url });
     persistCustomEx();
     mountCustomEx();
     refreshExerciseLists();
@@ -2707,14 +3040,27 @@
       splitDays(s.key).forEach(d=>{ if(d.ex.includes(ex.n)) usedInSplits.push(s.name + " · " + d.name); });
     });
     const inTray = tray.some(t=>t.id === ex.id);
-    let msg = `Delete "${ex.n}" from your directory?`;
+    /* Say what it costs before asking. A count of sessions is the part a person
+       actually weighs, and it was the part this never mentioned. */
+    const sessions = history.filter(h=> (h.items||[]).some(i=> i.id === ex.id)).length;
+    const inRecords = lifts.some(l=> l.name === ex.n);
+
+    let msg = `Delete "${ex.n}" for good?\n\nThis cannot be undone.`;
+    if(sessions) msg += `\n\n${sessions} logged session${sessions>1?"s":""} used it. Those stay in your calendar and keep the name, but the exercise is gone from the directory — you could not add it again without recreating it.`;
+    if(inRecords)        msg += `\n\nIt is one of your tracked records.`;
     if(usedInSplits.length) msg += `\n\nIt's used in ${usedInSplits.length} split day${usedInSplits.length>1?"s":""} — those will show it as missing.`;
-    if(inTray) msg += `\n\nIt will also be removed from your current workout.`;
+    if(inTray)           msg += `\n\nIt will also be removed from your current workout.`;
+    if(sessions || inRecords) msg += `\n\nArchive instead if you just want it out of the list — that keeps everything.`;
     if(!confirm(msg)) return;
 
-    customEx = customEx.filter(c=>c.n !== ex.n);
+    customEx = customEx.filter(c=> (c.uid || slug(c.n)) !== ex.uid);
     persistCustomEx();
     mountCustomEx();
+    /* The preference row is keyed by id, so it would otherwise outlive the
+       exercise and silently attach to a future one that slugs the same way. */
+    delete exPrefs[ex.id];
+    persistExPrefs();
+    editingEx = null;
     if(inTray){
       clearItemTimer(ex.id);
       tray = tray.filter(t=>t.id !== ex.id);
@@ -2918,6 +3264,7 @@
             <div class="ex-name">${allDone ? "✓ " : ""}${esc(item.n)}</div>
             <div class="head-meta"><span class="badge">${esc(item.eq)}</span>${ssBadge}${timerBadge}</div>
             ${lastTimeLine(lt)}
+            ${prefFor(item.id).note ? `<div class="item-note">${esc(prefFor(item.id).note)}</div>` : ""}
           </div>
           <div class="head-right">
             <label class="sets-field">Sets<input type="number" min="1" max="20" class="sets-input" value="${item.sets}"></label>
