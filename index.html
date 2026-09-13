@@ -19,7 +19,7 @@
 <!-- Shown in Settings so you can tell at a glance which build you are on, and
      what a device that is behaving oddly is actually running. Keep it in step
      with VERSION in sw.js. -->
-<meta name="ptp-version" content="ptp-v11">
+<meta name="ptp-version" content="ptp-v12">
 <meta name="description" content="Push / Pull / Legs / Abs workout tracker — split templates, set-by-set logging, training calendar and personal records.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -810,6 +810,25 @@
     padding-left:8px; border-left:2px solid var(--border-strong);
   }
 
+  /* ---- Icons (Tabler outline, inlined) ----
+     Two modes only: a block icon that is the whole content of a button, and an
+     inline one that sits in a run of text and has to share a baseline with it. */
+  .tico{ display:block; flex:none; }
+  .tico.inline{ display:inline-block; vertical-align:-0.16em; margin-right:.32em; }
+  .tico.inline:last-child{ margin-right:0; }
+  /* Buttons whose entire content is now an icon need it centred, not baseline-set. */
+  .icon-btn, .add-btn, .dx-btn, .dc-del, .preset .pbtns button, .interval-row .rm,
+  #calPrev, #calNext, .machine-btn .mx{
+    display:flex; align-items:center; justify-content:center;
+  }
+  .acct-menu .ico{ display:flex; align-items:center; justify-content:center; }
+  .avatar-btn .caret{ display:flex; align-items:center; }
+  .machine-btn{ gap:7px; }
+  .run-plan{ display:flex; align-items:center; gap:9px; }
+  .ex-name .done-tick{ color: var(--item-color); }
+  .timer-badge .t{ font-variant-numeric: tabular-nums; }
+  .badge .tico.inline{ vertical-align:-0.18em; }
+
   /* ================= Splits ================= */
   .split-tile.make-new{
     border-style:dashed; align-items:flex-start; justify-content:center; gap:6px; min-height:120px;
@@ -1341,49 +1360,49 @@
       <button type="button" class="avatar-btn" id="avatarBtn" aria-haspopup="menu" aria-expanded="false">
         <span class="avatar" id="avatarInitials">PP</span>
         <span class="who" id="avatarName">Set up profile</span>
-        <span class="caret">▼</span>
+        <span class="caret" id="avatarCaret"></span>
       </button>
       <div class="acct-menu" id="acctMenu" role="menu">
         <div class="menu-head">
           <div class="nm" id="menuName">Your profile</div>
           <div class="em" id="menuEmail">Stored on this device only</div>
         </div>
-        <button type="button" role="menuitem" data-go="account"><span class="ico">◉</span>Account</button>
-        <button type="button" role="menuitem" data-go="settings"><span class="ico">⚙</span>Settings</button>
+        <button type="button" role="menuitem" data-go="account"><span class="ico" data-ico="user-circle"></span>Account</button>
+        <button type="button" role="menuitem" data-go="settings"><span class="ico" data-ico="settings"></span>Settings</button>
         <div class="sep"></div>
-        <button type="button" role="menuitem" id="exportBtn"><span class="ico">↓</span>Export my data</button>
-        <button type="button" role="menuitem" class="destructive" id="resetBtn"><span class="ico">⟲</span>Reset all data</button>
+        <button type="button" role="menuitem" id="exportBtn"><span class="ico" data-ico="download"></span>Export my data</button>
+        <button type="button" role="menuitem" class="destructive" id="resetBtn"><span class="ico" data-ico="refresh"></span>Reset all data</button>
       </div>
     </div>
   </div>
 
   <nav class="viewtabs" id="viewtabs">
     <button type="button" class="viewtab active" data-view="train">
-      <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 9v6M6 7v10M18 7v10M21 9v6M6 12h12"/></svg></span>
+      <span class="tab-ico" data-ico="barbell" data-ico-size="23" aria-hidden="true"></span>
       <span class="tab-label">Train</span>
     </button>
     <button type="button" class="viewtab" data-view="splits">
-      <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="7" rx="1.5"/><rect x="14" y="13" width="7" height="7" rx="1.5"/></svg></span>
+      <span class="tab-ico" data-ico="layout-grid" data-ico-size="23" aria-hidden="true"></span>
       <span class="tab-label">Splits</span>
     </button>
     <button type="button" class="viewtab" data-view="cardio">
-      <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2.5-6 4 13 3-8.5L18 12h4"/></svg></span>
+      <span class="tab-ico" data-ico="activity" data-ico-size="23" aria-hidden="true"></span>
       <span class="tab-label">Cardio</span>
     </button>
     <button type="button" class="viewtab" data-view="calendar">
-      <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><circle cx="8.5" cy="14.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="14.5" r="1.1" fill="currentColor" stroke="none"/></svg></span>
+      <span class="tab-ico" data-ico="calendar" data-ico-size="23" aria-hidden="true"></span>
       <span class="tab-label">Calendar</span>
     </button>
     <button type="button" class="viewtab" data-view="records">
-      <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16"/><path d="M7.5 15.5l3.5-4 3 2.5 4.5-5.5"/></svg></span>
+      <span class="tab-ico" data-ico="chart-line" data-ico-size="23" aria-hidden="true"></span>
       <span class="tab-label">Records</span>
     </button>
     <button type="button" class="viewtab" data-view="account">
-      <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg></span>
+      <span class="tab-ico" data-ico="user-circle" data-ico-size="23" aria-hidden="true"></span>
       <span class="tab-label">Account</span>
     </button>
     <button type="button" class="viewtab" data-view="settings">
-      <span class="tab-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8M18.5 18.5l-1.8-1.8M7.3 7.3L5.5 5.5"/></svg></span>
+      <span class="tab-ico" data-ico="settings" data-ico-size="23" aria-hidden="true"></span>
       <span class="tab-label">Settings</span>
     </button>
   </nav>
@@ -1501,9 +1520,9 @@
           <div class="cal-head">
             <h3 id="calTitle">Month</h3>
             <div class="cal-nav">
-              <button type="button" id="calPrev" aria-label="Previous month">‹</button>
+              <button type="button" id="calPrev" aria-label="Previous month" data-ico="chevron-left"></button>
               <button type="button" class="today-btn" id="calToday">Today</button>
-              <button type="button" id="calNext" aria-label="Next month">›</button>
+              <button type="button" id="calNext" aria-label="Next month" data-ico="chevron-right"></button>
             </div>
           </div>
           <div class="cal-grid" id="calGrid"></div>
@@ -1531,7 +1550,7 @@
         <div class="panel cardio-run" id="cardioRun" hidden>
           <div class="run-head">
             <div>
-              <div class="run-plan" id="runPlan">Treadmill</div>
+              <div class="run-plan"><span id="runPlanIcon"></span><span id="runPlan">Treadmill</span></div>
               <div class="run-step" id="runStep">Interval 1 of 6</div>
             </div>
             <button type="button" class="btn btn-danger" id="runStop">Stop</button>
@@ -2319,6 +2338,60 @@
     try{ if(next.selectionStart != null) next.setSelectionRange(scrollTop, scrollTop); }catch(e){}
   }
 
+  /* ================= Icons =================
+     Tabler Icons (MIT), outline set: 24x24, 2px stroke, round caps and joins —
+     the same idiom the hand-drawn originals used, so sizes and colours carry
+     over unchanged. Inlined rather than loaded: an icon font or a CDN sprite
+     would be one more thing to fail in a basement with no signal, and the whole
+     set is 5 KB.
+
+     These replace thirteen Unicode characters that were doing icon duty. Two of
+     them, U+23F1 STOPWATCH and U+2699 GEAR, are in the emoji set and iOS has no
+     monochrome glyph for either — it drew them from Apple Color Emoji, so the
+     rest timer and the settings item were rendering in colour inside a
+     monochrome UI. The rest simply arrived at whatever weight the device's
+     fallback font happened to use. */
+  const ICONS = {
+    "activity": "<path d=\"M3 12h4l3 8l4 -16l3 8h4\" />",
+    "archive": "<path d=\"M3 6a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2\" /> <path d=\"M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10\" /> <path d=\"M10 12l4 0\" />",
+    "arrow-up-right": "<path d=\"M17 7l-10 10\" /> <path d=\"M8 7l9 0l0 9\" />",
+    "arrows-exchange": "<path d=\"M7 10h14l-4 -4\" /> <path d=\"M17 14h-14l4 4\" />",
+    "barbell": "<path d=\"M2 12h1\" /> <path d=\"M6 8h-2a1 1 0 0 0 -1 1v6a1 1 0 0 0 1 1h2\" /> <path d=\"M6 7v10a1 1 0 0 0 1 1h1a1 1 0 0 0 1 -1v-10a1 1 0 0 0 -1 -1h-1a1 1 0 0 0 -1 1\" /> <path d=\"M9 12h6\" /> <path d=\"M15 7v10a1 1 0 0 0 1 1h1a1 1 0 0 0 1 -1v-10a1 1 0 0 0 -1 -1h-1a1 1 0 0 0 -1 1\" /> <path d=\"M18 8h2a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-2\" /> <path d=\"M22 12h-1\" />",
+    "bike": "<path d=\"M2 18a3 3 0 1 0 6 0a3 3 0 0 0 -6 0\" /> <path d=\"M16 18a3 3 0 1 0 6 0a3 3 0 0 0 -6 0\" /> <path d=\"M12 19v-4l-3 -3l5 -4l2 3h3\" /> <path d=\"M13.007 5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\" />",
+    "calendar": "<path d=\"M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12\" /> <path d=\"M16 3v4\" /> <path d=\"M8 3v4\" /> <path d=\"M4 11h16\" /> <path d=\"M11 15h1\" /> <path d=\"M12 15v3\" />",
+    "chart-line": "<path d=\"M4 19l16 0\" /> <path d=\"M4 15l4 -6l4 2l4 -5l4 4\" />",
+    "check": "<path d=\"M5 12l5 5l10 -10\" />",
+    "chevron-down": "<path d=\"M6 9l6 6l6 -6\" />",
+    "chevron-left": "<path d=\"M15 6l-6 6l6 6\" />",
+    "chevron-right": "<path d=\"M9 6l6 6l-6 6\" />",
+    "dots": "<path d=\"M4 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M18 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" />",
+    "download": "<path d=\"M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2\" /> <path d=\"M7 11l5 5l5 -5\" /> <path d=\"M12 4l0 12\" />",
+    "jump-rope": "<path d=\"M6 14v-6a3 3 0 1 1 6 0v8a3 3 0 0 0 6 0v-6\" /> <path d=\"M16 5a2 2 0 0 1 2 -2a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2a2 2 0 0 1 -2 -2l0 -3\" /> <path d=\"M4 16a2 2 0 0 1 2 -2a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2a2 2 0 0 1 -2 -2l0 -3\" />",
+    "kayak": "<path d=\"M6.414 6.414a2 2 0 0 0 0 -2.828l-1.414 -1.414l-2.828 2.828l1.414 1.414a2 2 0 0 0 2.828 0\" /> <path d=\"M17.586 17.586a2 2 0 0 0 0 2.828l1.414 1.414l2.828 -2.828l-1.414 -1.414a2 2 0 0 0 -2.828 0\" /> <path d=\"M6.5 6.5l11 11\" /> <path d=\"M22 2.5c-9.983 2.601 -17.627 7.952 -20 19.5c9.983 -2.601 17.627 -7.952 20 -19.5\" /> <path d=\"M6.5 12.5l5 5\" /> <path d=\"M12.5 6.5l5 5\" />",
+    "layout-grid": "<path d=\"M4 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\" /> <path d=\"M14 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\" /> <path d=\"M4 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\" /> <path d=\"M14 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\" />",
+    "minus": "<path d=\"M5 12l14 0\" />",
+    "pencil": "<path d=\"M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4\" /> <path d=\"M13.5 6.5l4 4\" />",
+    "plus": "<path d=\"M12 5l0 14\" /> <path d=\"M5 12l14 0\" />",
+    "refresh": "<path d=\"M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4\" /> <path d=\"M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4\" />",
+    "settings": "<path d=\"M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065\" /> <path d=\"M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0\" />",
+    "stairs": "<path d=\"M22 5h-5v5h-5v5h-5v5h-5\" />",
+    "stopwatch": "<path d=\"M5 13a7 7 0 1 0 14 0a7 7 0 0 0 -14 0\" /> <path d=\"M14.5 10.5l-2.5 2.5\" /> <path d=\"M17 8l1 -1\" /> <path d=\"M14 3h-4\" />",
+    "stretching": "<path d=\"M15 5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M5 20l5 -.5l1 -2\" /> <path d=\"M18 20v-5h-5.5l2.5 -6.5l-5.5 1l1.5 2\" />",
+    "trash": "<path d=\"M4 7l16 0\" /> <path d=\"M10 11l0 6\" /> <path d=\"M14 11l0 6\" /> <path d=\"M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12\" /> <path d=\"M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3\" />",
+    "treadmill": "<path d=\"M10 3a1 1 0 1 0 2 0a1 1 0 0 0 -2 0\" /> <path d=\"M3 14l4 1l.5 -.5\" /> <path d=\"M12 18v-3l-3 -2.923l.75 -5.077\" /> <path d=\"M6 10v-2l4 -1l2.5 2.5l2.5 .5\" /> <path d=\"M21 22a1 1 0 0 0 -1 -1h-16a1 1 0 0 0 -1 1\" /> <path d=\"M18 21l1 -11l2 -1\" />",
+    "user": "<path d=\"M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0\" /> <path d=\"M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2\" />",
+    "user-circle": "<path d=\"M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0\" /> <path d=\"M9 10a3 3 0 1 0 6 0a3 3 0 1 0 -6 0\" /> <path d=\"M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855\" />",
+    "walk": "<path d=\"M12 4a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M7 21l3 -4\" /> <path d=\"M16 21l-2 -4l-3 -3l1 -6\" /> <path d=\"M6 12l2 -3l4 -1l3 3l3 1\" />",
+    "x": "<path d=\"M18 6l-12 12\" /> <path d=\"M6 6l12 12\" />"
+  };
+  function ico(name, size, cls){
+    const d = ICONS[name];
+    if(!d) return "";
+    return `<svg class="tico${cls ? " " + cls : ""}" width="${size || 18}" height="${size || 18}"`
+      + ` viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"`
+      + ` stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  }
+
   function esc(s){
     return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
       ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -2726,27 +2799,27 @@
           const card = document.createElement("div");
           card.className = "card" + (isArchived(ex.id) ? " is-archived" : "");
           const link = ex.custom
-            ? (ex.url ? `<a class="xrx" href="${esc(ex.url)}" target="_blank" rel="noopener">reference ↗</a>` : "")
-            : `<a class="xrx" href="${ex.url}" target="_blank" rel="noopener">exrx.net ↗</a>`;
+            ? (ex.url ? `<a class="xrx" href="${esc(ex.url)}" target="_blank" rel="noopener">reference ${ico("arrow-up-right",12,"inline")}</a>` : "")
+            : `<a class="xrx" href="${ex.url}" target="_blank" rel="noopener">exrx.net ${ico("arrow-up-right",12,"inline")}</a>`;
           card.innerHTML = `
             <div class="info">
               <div class="name-row">
                 <span class="name">${esc(ex.n)}</span>
                 <button type="button" class="ex-menu-btn" data-focus="menu-${esc(ex.id)}"
                         aria-expanded="${editingEx === ex.id}"
-                        aria-label="Options for ${esc(ex.n)}">⋯</button>
+                        aria-label="Options for ${esc(ex.n)}">${ico("dots",16)}</button>
               </div>
               <div class="meta">
                 <span class="badge">${esc(ex.eq)}</span>
                 ${ex.custom ? `<span class="badge custom-badge">Yours</span>` : ""}
-                ${note ? `<span class="badge note-badge" title="${esc(note)}">✎ note</span>` : ""}
+                ${note ? `<span class="badge note-badge" title="${esc(note)}">${ico("pencil",12,"inline")} note</span>` : ""}
                 ${pref.sets || pref.rest != null ? `<span class="badge">${pref.sets ? pref.sets + "×" : ""}${pref.rest != null ? " " + formatTime(pref.rest) : ""}</span>` : ""}
                 ${link}
               </div>
             </div>
             <button type="button" class="add-btn${inTray ? " added" : ""}" aria-pressed="${inTray}"
                   data-focus="add-${esc(ex.id)}"
-                  aria-label="${inTray ? "Remove" : "Add"} ${esc(ex.n)} ${inTray ? "from" : "to"} your workout">${inTray ? "✓" : "+"}</button>`;
+                  aria-label="${inTray ? "Remove" : "Add"} ${esc(ex.n)} ${inTray ? "from" : "to"} your workout">${inTray ? ico("check",17) : ico("plus",17)}</button>`;
           card.querySelector(".add-btn").addEventListener("click", ()=> toggleTray(ex));
           card.querySelector(".ex-menu-btn").addEventListener("click", ()=>{
             editingEx = (editingEx === ex.id) ? null : ex.id;
@@ -3149,7 +3222,9 @@
         return;
       }
       const el = document.getElementById("timer-" + item.id);
-      if(el) el.textContent = "⏱ " + formatTime(state.remaining);
+      /* Only the time text, so the inlined icon beside it survives the tick. */
+      const t = el && el.querySelector(".t");
+      if(t) t.textContent = formatTime(state.remaining);
     }, 1000);
     timers[item.id] = state;
   }
@@ -3199,11 +3274,11 @@
       const ts = timers[item.id];
       let timerBadge = "";
       if(ts){
-        timerBadge = `<span class="badge timer-badge running" id="timer-${item.id}">⏱ ${formatTime(ts.remaining)}</span>`;
+        timerBadge = `<span class="badge timer-badge running" id="timer-${item.id}">${ico("stopwatch",13,"inline")}<span class="t">${formatTime(ts.remaining)}</span></span>`;
       } else if(item.restSeconds > 0){
-        timerBadge = `<span class="badge timer-badge" id="timer-${item.id}">⏱ ${formatTime(item.restSeconds)}</span>`;
+        timerBadge = `<span class="badge timer-badge" id="timer-${item.id}">${ico("stopwatch",13,"inline")}<span class="t">${formatTime(item.restSeconds)}</span></span>`;
       }
-      const ssBadge = item.supersetId ? `<span class="badge superset-badge">⇄ Superset ${labels[item.supersetId]}</span>` : "";
+      const ssBadge = item.supersetId ? `<span class="badge superset-badge">${ico("arrows-exchange",13,"inline")} Superset ${labels[item.supersetId]}</span>` : "";
 
       const setRows = item.expanded ? `
         <div class="set-rows">
@@ -3261,7 +3336,7 @@
       row.innerHTML = `
         <div class="tray-item-head">
           <div class="head-left">
-            <div class="ex-name">${allDone ? "✓ " : ""}${esc(item.n)}</div>
+            <div class="ex-name">${allDone ? ico("check",14,"inline done-tick") : ""}${esc(item.n)}</div>
             <div class="head-meta"><span class="badge">${esc(item.eq)}</span>${ssBadge}${timerBadge}</div>
             ${lastTimeLine(lt)}
             ${prefFor(item.id).note ? `<div class="item-note">${esc(prefFor(item.id).note)}</div>` : ""}
@@ -3270,10 +3345,10 @@
             <label class="sets-field">Sets<input type="number" min="1" max="20" class="sets-input" value="${item.sets}"></label>
             <button type="button" class="icon-btn ellipsis" data-focus="menu" aria-haspopup="true"
                     aria-expanded="${openMenuFor === item.id}"
-                    aria-label="More options for ${esc(item.n)}">⋯</button>
+                    aria-label="More options for ${esc(item.n)}">${ico("dots",16)}</button>
             <button type="button" class="icon-btn expand-btn" data-focus="expand" aria-expanded="${item.expanded}"
-                    aria-label="${item.expanded?"Collapse":"Expand"} ${esc(item.n)} sets">${item.expanded?"–":"+"}</button>
-            <button type="button" class="icon-btn rm" aria-label="Remove ${esc(item.n)}">×</button>
+                    aria-label="${item.expanded?"Collapse":"Expand"} ${esc(item.n)} sets">${item.expanded ? ico("minus",16) : ico("plus",16)}</button>
+            <button type="button" class="icon-btn rm" aria-label="Remove ${esc(item.n)}">${ico("x",16)}</button>
           </div>
         </div>
         ${setRows}
@@ -3603,7 +3678,7 @@
         <div class="split-editor-head">
           <div>
             <h3>${esc(def.name)}</h3>
-            <p class="split-about">${esc(def.about)}${def.src ? ` <a href="${def.src}" target="_blank" rel="noopener">Reference ↗</a>` : ""}</p>
+            <p class="split-about">${esc(def.about)}${def.src ? ` <a href="${def.src}" target="_blank" rel="noopener">Reference ${ico("arrow-up-right",12,"inline")}</a>` : ""}</p>
           </div>
           <div class="split-editor-actions">
             ${own ? `<button type="button" class="btn" id="renameSplitBtn">Rename</button>` : ""}
@@ -3630,8 +3705,8 @@
                   <span class="dx-name">${esc(name)}</span>
                   <span class="dx-eq">${ex ? esc(ex.eq) : "not in the directory"}</span>
                 </span>
-                <button type="button" class="dx-btn swap" data-day="${di}" data-ex="${xi}" aria-label="Swap ${esc(name)}">⇄</button>
-                <button type="button" class="dx-btn rm" data-day="${di}" data-ex="${xi}" aria-label="Remove ${esc(name)}">×</button>
+                <button type="button" class="dx-btn swap" data-day="${di}" data-ex="${xi}" aria-label="Swap ${esc(name)}">${ico("arrows-exchange",15)}</button>
+                <button type="button" class="dx-btn rm" data-day="${di}" data-ex="${xi}" aria-label="Remove ${esc(name)}">${ico("x",15)}</button>
               </div>`;
             }).join("");
 
@@ -3647,7 +3722,7 @@
                 <div class="dc-head-row">
                   <input class="day-name-input" data-dayname="${di}" value="${esc(d.name)}"
                          maxlength="40" aria-label="Name of day ${di+1}">
-                  ${days.length > 1 ? `<button type="button" class="dc-del" data-delday="${di}" aria-label="Delete ${esc(d.name)}">×</button>` : ""}
+                  ${days.length > 1 ? `<button type="button" class="dc-del" data-delday="${di}" aria-label="Delete ${esc(d.name)}">${ico("x",15)}</button>` : ""}
                 </div>
                 ${d.note ? `<div class="dc-note">${esc(d.note)}</div>` : ""}
               </div>
@@ -3830,6 +3905,13 @@
      has, plus a duration. That one shape covers the treadmill's incline+speed and
      the stairmaster's single level without special-casing either. */
 
+  /* The rower and the elliptical have no icon of their own in the set; a kayak
+     is the same pulling motion and walk is the same striding one, which beats
+     repeating a generic for both. */
+  const MACHINE_ICON = { treadmill:"treadmill", stairs:"stairs", bike:"bike",
+                         rower:"kayak", elliptical:"walk", rope:"jump-rope" };
+  function machineIcon(key){ return MACHINE_ICON[key] || "stretching"; }
+
   const CARDIO_MACHINES = [
     { key:"treadmill",  name:"Treadmill",
       fields:[{k:"incline", label:"Incline", max:40,  step:"0.5"},
@@ -3909,9 +3991,9 @@
       const on = m.key === cur.key;
       const del = customMachines.some(c=>c.key === m.key)
         ? `<span class="mx" role="button" tabindex="0" data-del="${esc(m.key)}"
-                 aria-label="Delete ${esc(m.name)}">×</span>` : "";
+                 aria-label="Delete ${esc(m.name)}">${ico("x",14)}</span>` : "";
       return `<button type="button" class="machine-btn${on?" on":""}" data-m="${esc(m.key)}"
-                      data-focus="machine-${esc(m.key)}" aria-pressed="${on}">${esc(m.name)}${del}</button>`;
+                      data-focus="machine-${esc(m.key)}" aria-pressed="${on}">${ico(machineIcon(m.key),17)}${esc(m.name)}${del}</button>`;
     }).join("");
 
     machineRow.querySelectorAll(".machine-btn").forEach(btn=>{
@@ -3991,7 +4073,7 @@
                  value="${String(ss).padStart(2,"0")}" placeholder="00" aria-label="Interval ${i+1} seconds">
         </span>
         <button type="button" class="rm" data-rm="${i}" data-focus="iv-${i}-rm"
-                aria-label="Remove interval ${i+1}">×</button>
+                aria-label="Remove interval ${i+1}">${ico("x",16)}</button>
       </div>`;
     }).join("");
 
@@ -4074,7 +4156,7 @@
         <div class="pbtns">
           <button type="button" class="go"  data-run="${esc(pl.key)}">Start</button>
           <button type="button" data-load="${esc(pl.key)}">Edit</button>
-          <button type="button" class="del" data-del="${esc(pl.key)}" aria-label="Delete ${esc(pl.name)}">×</button>
+          <button type="button" class="del" data-del="${esc(pl.key)}" aria-label="Delete ${esc(pl.name)}">${ico("x",14)}</button>
         </div>
       </div>`;
     }).join("");
@@ -4241,6 +4323,7 @@
     const total = run.list.reduce((a,i)=>a+i.sec, 0);
 
     document.getElementById("runPlan").textContent = run.name;
+    document.getElementById("runPlanIcon").innerHTML = ico(machineIcon(run.machine.key), 19);
     /* An unnamed plan is titled after its machine, so naming it again here would
        read "Treadmill / Interval 1 of 6 · Treadmill". */
     const sameName = run.name === run.machine.name;
@@ -4578,7 +4661,7 @@
             <span class="nm">${esc(i.n)}</span>
             <span class="badge">${esc(i.eq)}</span>
           </div>
-          <div class="setline">${i.setLog.map((s,n)=> `S${n+1} ${esc(setLabel(s))}${s.done ? "✓" : ""}`).join("   ")}</div>
+          <div class="setline">${i.setLog.map((s,n)=> `S${n+1} ${esc(setLabel(s))}${s.done ? ico("check",12,"inline") : ""}`).join("   ")}</div>
         </div>`).join("")}
       ${cardioBlocks(selectedDay)}
       <div class="form-actions">
@@ -4738,7 +4821,7 @@
             <h3>${esc(lift.name)}</h3>
             <div class="eqline">${ex ? esc(ex.eq) + " · " + esc(ex.g) : CAT_LABEL[lift.cat]}</div>
           </div>
-          <button type="button" class="icon-btn rm remove-lift" aria-label="Stop tracking ${esc(lift.name)}">×</button>
+          <button type="button" class="icon-btn rm remove-lift" aria-label="Stop tracking ${esc(lift.name)}">${ico("x",16)}</button>
         </div>
 
         <div class="pr-caption">Estimated one-rep max</div>
@@ -4764,7 +4847,7 @@
                 <span class="d">${shortDate(e.date)}</span>
                 <span class="w">${e.weight}${unit()} × ${e.reps}</span>
                 ${isBest ? `<span class="pr-flag">PR</span>` : ""}
-                <button type="button" class="del" data-entry="${esc(e.date)}|${e.weight}|${e.reps}" aria-label="Delete entry">×</button>
+                <button type="button" class="del" data-entry="${esc(e.date)}|${e.weight}|${e.reps}" aria-label="Delete entry">${ico("x",14)}</button>
               </div>`;
             }).join("")}
           </div>
@@ -5931,6 +6014,14 @@
   }
   const initFailures = [];
 
+  /* Static markup declares which icon it wants; this fills them once at boot so
+     the map stays the single source and the HTML stays readable. */
+  step("static icons", ()=>{
+    document.querySelectorAll("[data-ico]").forEach(el=>{
+      el.innerHTML = ico(el.dataset.ico, parseInt(el.dataset.icoSize,10) || 16);
+    });
+    document.getElementById("avatarCaret").innerHTML = ico("chevron-down", 14);
+  });
   step("identity", renderIdentity);
   step("exercise lists", refreshExerciseLists);
   step("train mode", ()=> setTrainMode(tray.length ? "workout" : "browse"));
