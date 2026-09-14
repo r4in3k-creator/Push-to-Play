@@ -101,6 +101,12 @@ knowing:
   page. Anything logged while that banner is up is lost on reload — copy the
   session out through Settings → Share before closing the app.
 
+**Export my data** in the avatar menu writes a JSON file holding everything —
+profile, settings, history, records, your own exercises and splits, every note
+and per-exercise default, and all of your cardio. Paste that file back into
+Settings → Import and it offers to restore the lot. It says what it contains and
+warns that restoring replaces what is on the device, because it does.
+
 Keys are all prefixed `ptp-`: `ptp-tray`, `ptp-history`, `ptp-prs`,
 `ptp-splits`, `ptp-profile`, `ptp-settings`, `ptp-theme`, `ptp-active-split`,
 `ptp-custom-ex`, `ptp-custom-splits`, `ptp-cardio-plans`, `ptp-cardio-log`,
@@ -161,7 +167,20 @@ from a GitHub project page as happily as from a domain root.
 
 Things that look like details and are not:
 
-1. **Icons are inlined SVG, never a text glyph.** Thirteen Unicode characters
+1. **A backup means every key, and a restore is not a share import.** The export
+   object has to list each store explicitly, so a new feature that adds one is a
+   new line here — miss it and the backup silently omits that data, which you
+   only discover when you restore. Routing a backup through the share importer
+   is what once reduced a full file to history alone: that path only understands
+   sessions.
+
+2. **`x` dismisses, `trash` destroys.** Seventeen `×` buttons once covered
+   everything from "remove an interval you just added" to "delete a training day,
+   no confirm, no undo", with nothing to tell them apart. Anything that destroys
+   saved data now carries `trash`, turns `--danger` on hover, and confirms with a
+   count of what goes with it.
+
+3. **Icons are inlined SVG, never a text glyph.** Thirteen Unicode characters
    used to do icon duty. Two of them — U+23F1 STOPWATCH and U+2699 GEAR — are in
    the emoji set and iOS has no monochrome glyph for either, so it drew them from
    Apple Color Emoji: a colour stopwatch inside a monochrome badge. The rest
@@ -170,7 +189,7 @@ Things that look like details and are not:
    "3–6 days/week" — so a blanket find-and-replace would be wrong; only the ones
    inside a control were swapped.
 
-2. **A custom exercise's `uid` is assigned once and never changes.** The id was
+4. **A custom exercise's `uid` is assigned once and never changes.** The id was
    derived from the name slug, which made renaming one quietly destructive:
    every tray item, logged session, personal record and split day points at the
    id. Entries written before the uid existed adopt their current slug as the
@@ -178,59 +197,59 @@ Things that look like details and are not:
    records at the time they were made, so a rename has to walk them —
    `renameEverywhere()` does that.
 
-3. **Per-exercise preferences live apart from `customEx`.** `ptp-ex-prefs` is
+5. **Per-exercise preferences live apart from `customEx`.** `ptp-ex-prefs` is
    keyed by exercise id and holds notes, default sets and rest, and the archived
    flag. It is separate because it applies to the built-ins too, and because
    nothing in it may ever reach a share code — codes carry catalogue indices and
    names, never preferences. Archived exercises stay in `EX` so history, records
    and split days still resolve; they are filtered at render only.
 
-4. **`BUILTIN_EX_COUNT` is a boundary, not a statistic.** Share codes address
+6. **`BUILTIN_EX_COUNT` is a boundary, not a statistic.** Share codes address
    built-in exercises by their index in `EX`. Anything past that index is a
    user's own exercise and travels by name instead. `mountCustomEx()` truncates
    to that count before re-appending, so indices can never shift. Adding a new
    built-in exercise anywhere but the end of its category's block will
    invalidate every share code already in the wild.
 
-5. **The phone stylesheet must stay last.** Nearly every rule in the
+7. **The phone stylesheet must stay last.** Nearly every rule in the
    `@media (max-width: 560px)` block narrows a rule declared further up the
    file, and at equal specificity the later rule wins. A breakpoint written
    above the rule it means to override loses silently — that has bitten this
    file twice (the bottom tab bar's footer clearance, and the mobile `.tiles`
    gap).
 
-6. **`[hidden]` needs `!important` here.** An author `display` rule outranks
+8. **`[hidden]` needs `!important` here.** An author `display` rule outranks
    the user-agent `[hidden]` rule, so several flex containers ignored the
    attribute until `[hidden]{ display: none !important; }` was added near the
    top.
 
-7. **`.layout > * { min-width: 0 }` is load-bearing.** A grid track's automatic
+9. **`.layout > * { min-width: 0 }` is load-bearing.** A grid track's automatic
    minimum is `min-content`, and a text input's `min-content` is its default
    character width. Two of them per set row pushed the tray 144px off a 390px
    screen before that guard existed.
 
-8. **The `⋯` menu is in the flow, deliberately.** It was an absolutely
+10. **The `⋯` menu is in the flow, deliberately.** It was an absolutely
    positioned popover and covered the expanded set rows underneath it. Do not
    put it back.
 
-9. **Colours are separated by lightness, not hue.** The four category colours
+11. **Colours are separated by lightness, not hue.** The four category colours
    (`#c04529` push, `#2c6bb0` pull, `#94670c` legs, `#00846f` abs) were checked
    for every pair under protanopia, deuteranopia and tritanopia — not just
    adjacent pairs, which is what let an earlier palette ship with push-red and
    legs-gold at ΔE 2.7 under deuteranopia. Each accent also carries its own
    `--on-*` ink token so text on a filled control clears 4.5:1.
 
-10. **Inputs are 16px on phones.** Anything smaller makes Safari zoom the page
+12. **Inputs are 16px on phones.** Anything smaller makes Safari zoom the page
    on focus, which on the workout screen means every reps and weight box.
 
-11. **Safe-area insets go through `--sa-t/-r/-b/-l`, not raw `env()`.**
+13. **Safe-area insets go through `--sa-t/-r/-b/-l`, not raw `env()`.**
    `env()` cannot be set from script, so raw calls are untestable. The four
    variables on `:root` default to the `env()` values and let a test inject a
    real iPhone's insets. The rules that consume them live in the *last* block
    of the stylesheet, because the phone block above sets `header{ padding: ... }`
    as a shorthand — which is exactly how the landscape inset got wiped once.
 
-12. **The iOS status bar is `default`, deliberately.** `black-translucent` hands
+14. **The iOS status bar is `default`, deliberately.** `black-translucent` hands
    the strip under the status bar and Dynamic Island to the page and forces
    white status text, which is unreadable over the light theme. With `default`,
    iOS reserves and paints that strip itself and picks its own contrast. The
@@ -239,41 +258,41 @@ Things that look like details and are not:
    real work in landscape, where the island and the rounded corners are on the
    left and right.
 
-13. **`<meta name="ptp-version">` and `VERSION` in `sw.js` must stay in step.**
+15. **`<meta name="ptp-version">` and `VERSION` in `sw.js` must stay in step.**
     The meta is what Settings displays and what the update check names in
     "version X is available". The comparison itself is a byte compare and does
     not depend on it, so a mismatch degrades the message, not the mechanism.
 
-14. **Bump `VERSION` in `sw.js` on every change.** Installed copies serve from
+16. **Bump `VERSION` in `sw.js` on every change.** Installed copies serve from
     the old cache until the version string changes.
 
-15. **The service worker only caches a response that proves it is this page.**
+17. **The service worker only caches a response that proves it is this page.**
     A captive portal answers a same-origin GET with 200 and its own sign-in HTML,
     which status and type cannot tell apart from a deploy — and caching it
     replaces the offline app with the portal, permanently. The page carries a
     `<meta name="ptp-app">` sentinel and the worker checks for it before writing
     the shell. Do not remove that meta tag.
 
-16. **`load()` takes a shape validator, and every call site passes one.**
+18. **`load()` takes a shape validator, and every call site passes one.**
     `JSON.parse` succeeding says nothing about shape. One wrong-typed value used
     to throw during init, before any listener was attached — so the tabs went
     dead and Settings → Reset, the only in-app way out, was unreachable. Init is
     also stepped, so one broken panel costs that panel and nothing else.
 
-17. **Cardio is deliberately not a fifth entry in `CAT_ORDER`.** That constant
+19. **Cardio is deliberately not a fifth entry in `CAT_ORDER`.** That constant
     drives the exercise tiles, the muscle-group chips and the share codec's
     catalogue indices; adding to it would shift every share code ever written.
     Cardio is a calendar category only — it has its own store, its own data
     shape (intervals with machine dials, not sets with weight and reps), and it
     appears in `CAT_LABEL` so the calendar can name it.
 
-18. **The interval timer runs on wall-clock timestamps.** Decrementing a counter
+20. **The interval timer runs on wall-clock timestamps.** Decrementing a counter
     per tick drifts over a 40-minute plan, and a backgrounded tab throttles the
     ticks to nothing — with timestamps, returning to the app shows the right
     time rather than however many callbacks fired. Overshoot at an interval
     boundary is carried into the next one rather than discarded.
 
-19. **Category colours are two sets, not one.** The saturated hues are for a
+21. **Category colours are two sets, not one.** The saturated hues are for a
     filled surface with white ink on it. `--push-ink` and friends are the same
     hues re-searched in OKLCH for 4.5:1 as *text*; deriving them by lifting
     luminance alone walks push-red and legs-gold back together under

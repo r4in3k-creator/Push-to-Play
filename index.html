@@ -19,7 +19,7 @@
 <!-- Shown in Settings so you can tell at a glance which build you are on, and
      what a device that is behaving oddly is actually running. Keep it in step
      with VERSION in sw.js. -->
-<meta name="ptp-version" content="ptp-v12">
+<meta name="ptp-version" content="ptp-v13">
 <meta name="description" content="Push / Pull / Legs / Abs workout tracker — split templates, set-by-set logging, training calendar and personal records.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -263,7 +263,8 @@
     background:none; border:none; border-radius:8px; padding:9px 10px; font-size:13px; cursor:pointer;
   }
   .acct-menu button:hover{ background: var(--surface-3); }
-  .acct-menu button .ico{ width:16px; text-align:center; color: var(--text-faint); font-size:12px; }
+  .acct-menu button .ico{ width:16px; }
+  .acct-menu button:not(.destructive) .ico{ color: var(--text-faint); }
   .acct-menu .sep{ height:1px; background: var(--border-soft); margin:6px 4px; }
   .acct-menu button.destructive{ color: var(--danger); }
 
@@ -590,9 +591,11 @@
   .check-wrap{ position:relative; flex:none; width:20px; height:20px; cursor:pointer; }
   .check-wrap input{ position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; }
   .check-wrap .checkmark{ position:absolute; inset:0; border:1.5px solid var(--border); border-radius:5px; background: var(--surface); display:flex; align-items:center; justify-content:center; }
-  .check-wrap .checkmark::after{ content:""; width:9px; height:5px; border-left:2px solid var(--item-ink, var(--bg)); border-bottom:2px solid var(--item-ink, var(--bg)); transform: rotate(-45deg) translateY(-1px); opacity:0; }
+  /* One check drawing in the app, not two. This was a rotated-border tick with
+     square ends sitting a few pixels from a round-capped Tabler one. */
+  .check-wrap .checkmark svg{ opacity:0; color: var(--item-ink, var(--bg)); }
   .check-wrap input:checked ~ .checkmark{ background: var(--item-color); border-color: var(--item-color); }
-  .check-wrap input:checked ~ .checkmark::after{ opacity:1; }
+  .check-wrap input:checked ~ .checkmark svg{ opacity:1; }
   .check-wrap input:focus-visible ~ .checkmark{ outline:2px solid var(--item-color); outline-offset:1px; }
   .menu-popover{ margin-top:10px; padding:10px 11px 11px; background: var(--surface); border:1px solid var(--border-soft); border-radius:8px; }
   .menu-section + .menu-section{ margin-top:11px; padding-top:11px; border-top:1px solid var(--border-soft); }
@@ -828,6 +831,57 @@
   .ex-name .done-tick{ color: var(--item-color); }
   .timer-badge .t{ font-variant-numeric: tabular-nums; }
   .badge .tico.inline{ vertical-align:-0.18em; }
+
+  .import-warn{
+    font-size:12px; color: var(--text); background: var(--surface-2);
+    border:1px solid var(--danger); border-radius:8px; padding:9px 11px; margin:11px 0 0;
+  }
+
+  /* ---- Icon control affordance ----
+     Every one of these had an aria-label and nothing a sighted user could see.
+     A tooltip is the cheap half; the rest is making them look pressable and big
+     enough to press. */
+
+  /* The exercise menu was border:transparent with chrome only on :hover, which
+     does not exist on a phone — so on 92 cards the only route to notes, defaults
+     and archive was invisible. */
+  .ex-menu-btn{
+    width:32px; height:32px;
+    border-color: var(--border); background: var(--surface-2);
+  }
+  .ex-menu-btn:hover{ background: var(--surface-3); }
+
+  /* The set-count field and the icon buttons were one uniform row, so [3] [+]
+     read as a stepper. A gap and a hairline separate the value from the actions. */
+  .head-right{ gap:6px; }
+  .sets-field{ padding-right:8px; margin-right:2px; border-right:1px solid var(--border-soft); }
+
+  /* Fingers, not a mouse pointer — the earlier pass only reached .icon-btn. */
+  .dx-btn, .dc-del, .add-btn, .preset .pbtns button, .pr-hist .h-row .del{
+    min-width:32px; min-height:32px;
+  }
+  .pr-hist .h-row .del{
+    border:1px solid var(--border-strong); background: var(--surface); border-radius:7px;
+  }
+  /* Small by necessity — it sits inside another button — so the hit area is grown
+     past the drawing instead of the drawing being grown. */
+  .machine-btn .mx{ position:relative; }
+  .machine-btn .mx::after{ content:""; position:absolute; inset:-9px; }
+
+  /* Anything that destroys saved data is marked, not just shaped. */
+  .dc-del:hover, .preset .pbtns .del:hover, .remove-lift:hover, .pr-hist .h-row .del:hover,
+  .machine-btn .mx:hover{ color: var(--danger); border-color: var(--danger); }
+
+  /* Rest is the one thing you want to cut short mid-workout; it was a bare span. */
+  button.timer-badge{ cursor:pointer; font-family:inherit; }
+  button.timer-badge.running:hover{ border-color: var(--text); color: var(--text); }
+
+  /* The note was reachable only through a title attribute, which a phone has no
+     way to show — the badge announced a note and then withheld it. */
+  .card-note{
+    font-size:12px; color: var(--text-dim); line-height:1.45; margin-top:7px;
+    padding-left:9px; border-left:2px solid var(--border-strong);
+  }
 
   /* ================= Splits ================= */
   .split-tile.make-new{
@@ -1371,7 +1425,7 @@
         <button type="button" role="menuitem" data-go="settings"><span class="ico" data-ico="settings"></span>Settings</button>
         <div class="sep"></div>
         <button type="button" role="menuitem" id="exportBtn"><span class="ico" data-ico="download"></span>Export my data</button>
-        <button type="button" role="menuitem" class="destructive" id="resetBtn"><span class="ico" data-ico="refresh"></span>Reset all data</button>
+        <button type="button" role="menuitem" class="destructive" id="resetBtn"><span class="ico" data-ico="trash"></span>Reset all data</button>
       </div>
     </div>
   </div>
@@ -1382,7 +1436,7 @@
       <span class="tab-label">Train</span>
     </button>
     <button type="button" class="viewtab" data-view="splits">
-      <span class="tab-ico" data-ico="layout-grid" data-ico-size="23" aria-hidden="true"></span>
+      <span class="tab-ico" data-ico="template" data-ico-size="23" aria-hidden="true"></span>
       <span class="tab-label">Splits</span>
     </button>
     <button type="button" class="viewtab" data-view="cardio">
@@ -1394,7 +1448,7 @@
       <span class="tab-label">Calendar</span>
     </button>
     <button type="button" class="viewtab" data-view="records">
-      <span class="tab-ico" data-ico="chart-line" data-ico-size="23" aria-hidden="true"></span>
+      <span class="tab-ico" data-ico="trophy" data-ico-size="23" aria-hidden="true"></span>
       <span class="tab-label">Records</span>
     </button>
     <button type="button" class="viewtab" data-view="account">
@@ -1520,9 +1574,9 @@
           <div class="cal-head">
             <h3 id="calTitle">Month</h3>
             <div class="cal-nav">
-              <button type="button" id="calPrev" aria-label="Previous month" data-ico="chevron-left"></button>
+              <button type="button" id="calPrev" title="Previous month" aria-label="Previous month" data-ico="chevron-left"></button>
               <button type="button" class="today-btn" id="calToday">Today</button>
-              <button type="button" id="calNext" aria-label="Next month" data-ico="chevron-right"></button>
+              <button type="button" id="calNext" title="Next month" aria-label="Next month" data-ico="chevron-right"></button>
             </div>
           </div>
           <div class="cal-grid" id="calGrid"></div>
@@ -1924,9 +1978,8 @@
 </footer>
 
 <div class="fab-stack">
-  <button type="button" class="top-fab" id="topFab" aria-label="Back to top">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-  </button>
+  <button type="button" class="top-fab" id="topFab" data-ico="arrow-up" data-ico-size="21"
+          title="Back to top" aria-label="Back to top"></button>
   <button type="button" class="tray-fab" id="trayFab" aria-label="Jump to your workout">
     Workout <span class="fab-count" id="fabCount">0</span>
   </button>
@@ -2353,9 +2406,10 @@
      fallback font happened to use. */
   const ICONS = {
     "activity": "<path d=\"M3 12h4l3 8l4 -16l3 8h4\" />",
-    "archive": "<path d=\"M3 6a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2\" /> <path d=\"M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10\" /> <path d=\"M10 12l4 0\" />",
+    "arrow-up": "<path d=\"M12 5l0 14\" /> <path d=\"M18 11l-6 -6\" /> <path d=\"M6 11l6 -6\" />",
     "arrow-up-right": "<path d=\"M17 7l-10 10\" /> <path d=\"M8 7l9 0l0 9\" />",
     "arrows-exchange": "<path d=\"M7 10h14l-4 -4\" /> <path d=\"M17 14h-14l4 4\" />",
+    "arrows-horizontal": "<path d=\"M7 8l-4 4l4 4\" /> <path d=\"M17 8l4 4l-4 4\" /> <path d=\"M3 12l18 0\" />",
     "barbell": "<path d=\"M2 12h1\" /> <path d=\"M6 8h-2a1 1 0 0 0 -1 1v6a1 1 0 0 0 1 1h2\" /> <path d=\"M6 7v10a1 1 0 0 0 1 1h1a1 1 0 0 0 1 -1v-10a1 1 0 0 0 -1 -1h-1a1 1 0 0 0 -1 1\" /> <path d=\"M9 12h6\" /> <path d=\"M15 7v10a1 1 0 0 0 1 1h1a1 1 0 0 0 1 -1v-10a1 1 0 0 0 -1 -1h-1a1 1 0 0 0 -1 1\" /> <path d=\"M18 8h2a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-2\" /> <path d=\"M22 12h-1\" />",
     "bike": "<path d=\"M2 18a3 3 0 1 0 6 0a3 3 0 0 0 -6 0\" /> <path d=\"M16 18a3 3 0 1 0 6 0a3 3 0 0 0 -6 0\" /> <path d=\"M12 19v-4l-3 -3l5 -4l2 3h3\" /> <path d=\"M13.007 5a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\" />",
     "calendar": "<path d=\"M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12\" /> <path d=\"M16 3v4\" /> <path d=\"M8 3v4\" /> <path d=\"M4 11h16\" /> <path d=\"M11 15h1\" /> <path d=\"M12 15v3\" />",
@@ -2364,11 +2418,13 @@
     "chevron-down": "<path d=\"M6 9l6 6l6 -6\" />",
     "chevron-left": "<path d=\"M15 6l-6 6l6 6\" />",
     "chevron-right": "<path d=\"M9 6l6 6l-6 6\" />",
+    "chevron-up": "<path d=\"M6 15l6 -6l6 6\" />",
     "dots": "<path d=\"M4 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M18 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" />",
+    "dots-vertical": "<path d=\"M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M11 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M11 5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" />",
     "download": "<path d=\"M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2\" /> <path d=\"M7 11l5 5l5 -5\" /> <path d=\"M12 4l0 12\" />",
     "jump-rope": "<path d=\"M6 14v-6a3 3 0 1 1 6 0v8a3 3 0 0 0 6 0v-6\" /> <path d=\"M16 5a2 2 0 0 1 2 -2a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2a2 2 0 0 1 -2 -2l0 -3\" /> <path d=\"M4 16a2 2 0 0 1 2 -2a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2a2 2 0 0 1 -2 -2l0 -3\" />",
-    "kayak": "<path d=\"M6.414 6.414a2 2 0 0 0 0 -2.828l-1.414 -1.414l-2.828 2.828l1.414 1.414a2 2 0 0 0 2.828 0\" /> <path d=\"M17.586 17.586a2 2 0 0 0 0 2.828l1.414 1.414l2.828 -2.828l-1.414 -1.414a2 2 0 0 0 -2.828 0\" /> <path d=\"M6.5 6.5l11 11\" /> <path d=\"M22 2.5c-9.983 2.601 -17.627 7.952 -20 19.5c9.983 -2.601 17.627 -7.952 20 -19.5\" /> <path d=\"M6.5 12.5l5 5\" /> <path d=\"M12.5 6.5l5 5\" />",
     "layout-grid": "<path d=\"M4 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\" /> <path d=\"M14 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\" /> <path d=\"M4 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\" /> <path d=\"M14 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4\" />",
+    "link": "<path d=\"M9 15l6 -6\" /> <path d=\"M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464\" /> <path d=\"M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463\" />",
     "minus": "<path d=\"M5 12l14 0\" />",
     "pencil": "<path d=\"M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4\" /> <path d=\"M13.5 6.5l4 4\" />",
     "plus": "<path d=\"M12 5l0 14\" /> <path d=\"M5 12l14 0\" />",
@@ -2376,10 +2432,10 @@
     "settings": "<path d=\"M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065\" /> <path d=\"M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0\" />",
     "stairs": "<path d=\"M22 5h-5v5h-5v5h-5v5h-5\" />",
     "stopwatch": "<path d=\"M5 13a7 7 0 1 0 14 0a7 7 0 0 0 -14 0\" /> <path d=\"M14.5 10.5l-2.5 2.5\" /> <path d=\"M17 8l1 -1\" /> <path d=\"M14 3h-4\" />",
-    "stretching": "<path d=\"M15 5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M5 20l5 -.5l1 -2\" /> <path d=\"M18 20v-5h-5.5l2.5 -6.5l-5.5 1l1.5 2\" />",
+    "template": "<path d=\"M4 5a1 1 0 0 1 1 -1h14a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-14a1 1 0 0 1 -1 -1l0 -2\" /> <path d=\"M4 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6\" /> <path d=\"M14 12l6 0\" /> <path d=\"M14 16l6 0\" /> <path d=\"M14 20l6 0\" />",
     "trash": "<path d=\"M4 7l16 0\" /> <path d=\"M10 11l0 6\" /> <path d=\"M14 11l0 6\" /> <path d=\"M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12\" /> <path d=\"M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3\" />",
     "treadmill": "<path d=\"M10 3a1 1 0 1 0 2 0a1 1 0 0 0 -2 0\" /> <path d=\"M3 14l4 1l.5 -.5\" /> <path d=\"M12 18v-3l-3 -2.923l.75 -5.077\" /> <path d=\"M6 10v-2l4 -1l2.5 2.5l2.5 .5\" /> <path d=\"M21 22a1 1 0 0 0 -1 -1h-16a1 1 0 0 0 -1 1\" /> <path d=\"M18 21l1 -11l2 -1\" />",
-    "user": "<path d=\"M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0\" /> <path d=\"M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2\" />",
+    "trophy": "<path d=\"M8 21l8 0\" /> <path d=\"M12 17l0 4\" /> <path d=\"M7 4l10 0\" /> <path d=\"M17 4v8a5 5 0 0 1 -10 0v-8\" /> <path d=\"M3 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\" /> <path d=\"M17 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0\" />",
     "user-circle": "<path d=\"M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0\" /> <path d=\"M9 10a3 3 0 1 0 6 0a3 3 0 1 0 -6 0\" /> <path d=\"M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855\" />",
     "walk": "<path d=\"M12 4a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M7 21l3 -4\" /> <path d=\"M16 21l-2 -4l-3 -3l1 -6\" /> <path d=\"M6 12l2 -3l4 -1l3 3l3 1\" />",
     "x": "<path d=\"M18 6l-12 12\" /> <path d=\"M6 6l12 12\" />"
@@ -2807,18 +2863,21 @@
                 <span class="name">${esc(ex.n)}</span>
                 <button type="button" class="ex-menu-btn" data-focus="menu-${esc(ex.id)}"
                         aria-expanded="${editingEx === ex.id}"
-                        aria-label="Options for ${esc(ex.n)}">${ico("dots",16)}</button>
+                        title="Notes, defaults and more"
+                        aria-label="Options for ${esc(ex.n)}">${ico("dots-vertical",16)}</button>
               </div>
               <div class="meta">
                 <span class="badge">${esc(ex.eq)}</span>
                 ${ex.custom ? `<span class="badge custom-badge">Yours</span>` : ""}
-                ${note ? `<span class="badge note-badge" title="${esc(note)}">${ico("pencil",12,"inline")} note</span>` : ""}
+                ${note ? `<span class="badge note-badge">${ico("pencil",12,"inline")} note</span>` : ""}
                 ${pref.sets || pref.rest != null ? `<span class="badge">${pref.sets ? pref.sets + "×" : ""}${pref.rest != null ? " " + formatTime(pref.rest) : ""}</span>` : ""}
                 ${link}
               </div>
+              ${note ? `<div class="card-note">${esc(note)}</div>` : ""}
             </div>
             <button type="button" class="add-btn${inTray ? " added" : ""}" aria-pressed="${inTray}"
                   data-focus="add-${esc(ex.id)}"
+                  title="${inTray ? "Remove from workout" : "Add to workout"}"
                   aria-label="${inTray ? "Remove" : "Add"} ${esc(ex.n)} ${inTray ? "from" : "to"} your workout">${inTray ? ico("check",17) : ico("plus",17)}</button>`;
           card.querySelector(".add-btn").addEventListener("click", ()=> toggleTray(ex));
           card.querySelector(".ex-menu-btn").addEventListener("click", ()=>{
@@ -3274,11 +3333,11 @@
       const ts = timers[item.id];
       let timerBadge = "";
       if(ts){
-        timerBadge = `<span class="badge timer-badge running" id="timer-${item.id}">${ico("stopwatch",13,"inline")}<span class="t">${formatTime(ts.remaining)}</span></span>`;
+        timerBadge = `<button type="button" class="badge timer-badge running" id="timer-${item.id}" data-skiprest="${item.id}" title="Skip the rest of this rest" aria-label="Skip rest for ${esc(item.n)}">${ico("stopwatch",13,"inline")}<span class="t">${formatTime(ts.remaining)}</span></button>`;
       } else if(item.restSeconds > 0){
-        timerBadge = `<span class="badge timer-badge" id="timer-${item.id}">${ico("stopwatch",13,"inline")}<span class="t">${formatTime(item.restSeconds)}</span></span>`;
+        timerBadge = `<span class="badge timer-badge" id="timer-${item.id}" title="Rest between sets — change it in the ⋮ menu">${ico("stopwatch",13,"inline")}<span class="t">${formatTime(item.restSeconds)}</span></span>`;
       }
-      const ssBadge = item.supersetId ? `<span class="badge superset-badge">${ico("arrows-exchange",13,"inline")} Superset ${labels[item.supersetId]}</span>` : "";
+      const ssBadge = item.supersetId ? `<span class="badge superset-badge">${ico("link",13,"inline")} Superset ${labels[item.supersetId]}</span>` : "";
 
       const setRows = item.expanded ? `
         <div class="set-rows">
@@ -3300,7 +3359,7 @@
               <label class="check-wrap">
                 <input type="checkbox" data-idx="${si}" data-focus="done-${si}" ${s.done ? "checked" : ""}
                        aria-label="Set ${si+1} of ${esc(item.n)} complete">
-                <span class="checkmark" aria-hidden="true"></span>
+                <span class="checkmark" aria-hidden="true">${ico("check",16)}</span>
               </label>
             </div>`).join("")}
         </div>` : "";
@@ -3345,10 +3404,12 @@
             <label class="sets-field">Sets<input type="number" min="1" max="20" class="sets-input" value="${item.sets}"></label>
             <button type="button" class="icon-btn ellipsis" data-focus="menu" aria-haspopup="true"
                     aria-expanded="${openMenuFor === item.id}"
-                    aria-label="More options for ${esc(item.n)}">${ico("dots",16)}</button>
+                    title="Superset and rest timer"
+                    aria-label="More options for ${esc(item.n)}">${ico("dots-vertical",16)}</button>
             <button type="button" class="icon-btn expand-btn" data-focus="expand" aria-expanded="${item.expanded}"
-                    aria-label="${item.expanded?"Collapse":"Expand"} ${esc(item.n)} sets">${item.expanded ? ico("minus",16) : ico("plus",16)}</button>
-            <button type="button" class="icon-btn rm" aria-label="Remove ${esc(item.n)}">${ico("x",16)}</button>
+                    title="${item.expanded?"Hide":"Show"} the set rows"
+                    aria-label="${item.expanded?"Collapse":"Expand"} ${esc(item.n)} sets">${item.expanded ? ico("chevron-up",17) : ico("chevron-down",17)}</button>
+            <button type="button" class="icon-btn rm" title="Remove from workout" aria-label="Remove ${esc(item.n)}">${ico("x",16)}</button>
           </div>
         </div>
         ${setRows}
@@ -3405,6 +3466,12 @@
       };
       bindNum(".weight-input", "weight", 2000);
       bindNum(".reps-input", "reps", 200);
+      const skip = row.querySelector("[data-skiprest]");
+      if(skip) skip.addEventListener("click", ()=>{
+        clearItemTimer(item.id);
+        renderTray();
+        showToast("Rest skipped");
+      });
       row.querySelectorAll(".set-row input[type=checkbox]").forEach(cb=>{
         cb.addEventListener("change", ()=>{
           const idx = parseInt(cb.dataset.idx,10);
@@ -3705,8 +3772,8 @@
                   <span class="dx-name">${esc(name)}</span>
                   <span class="dx-eq">${ex ? esc(ex.eq) : "not in the directory"}</span>
                 </span>
-                <button type="button" class="dx-btn swap" data-day="${di}" data-ex="${xi}" aria-label="Swap ${esc(name)}">${ico("arrows-exchange",15)}</button>
-                <button type="button" class="dx-btn rm" data-day="${di}" data-ex="${xi}" aria-label="Remove ${esc(name)}">${ico("x",15)}</button>
+                <button type="button" class="dx-btn swap" data-day="${di}" data-ex="${xi}" title="Swap for another exercise" aria-label="Swap ${esc(name)}">${ico("arrows-exchange",15)}</button>
+                <button type="button" class="dx-btn rm" data-day="${di}" data-ex="${xi}" title="Remove from this day" aria-label="Remove ${esc(name)}">${ico("x",15)}</button>
               </div>`;
             }).join("");
 
@@ -3722,7 +3789,8 @@
                 <div class="dc-head-row">
                   <input class="day-name-input" data-dayname="${di}" value="${esc(d.name)}"
                          maxlength="40" aria-label="Name of day ${di+1}">
-                  ${days.length > 1 ? `<button type="button" class="dc-del" data-delday="${di}" aria-label="Delete ${esc(d.name)}">${ico("x",15)}</button>` : ""}
+                  ${days.length > 1 ? `<button type="button" class="dc-del" data-delday="${di}"
+                 title="Delete this whole day" aria-label="Delete the ${esc(d.name)} day">${ico("trash",15)}</button>` : ""}
                 </div>
                 ${d.note ? `<div class="dc-note">${esc(d.note)}</div>` : ""}
               </div>
@@ -3793,6 +3861,10 @@
     splitEditor.querySelectorAll("[data-delday]").forEach(b=>{
       b.addEventListener("click", ()=>{
         const next = splitDays(activeSplit);
+        const target = next[parseInt(b.dataset.delday,10)];
+        if(!target) return;
+        if(!confirm(`Delete the "${target.name}" day?` +
+           (target.ex.length ? `\n\nIts ${target.ex.length} exercise${target.ex.length>1?"s":""} go with it.` : ""))) return;
         const gone = next.splice(parseInt(b.dataset.delday,10), 1)[0];
         saveSplitDays(activeSplit, next);
         pickerFor = null;
@@ -3909,8 +3981,8 @@
      is the same pulling motion and walk is the same striding one, which beats
      repeating a generic for both. */
   const MACHINE_ICON = { treadmill:"treadmill", stairs:"stairs", bike:"bike",
-                         rower:"kayak", elliptical:"walk", rope:"jump-rope" };
-  function machineIcon(key){ return MACHINE_ICON[key] || "stretching"; }
+                         rower:"arrows-horizontal", elliptical:"walk", rope:"jump-rope" };
+  function machineIcon(key){ return MACHINE_ICON[key] || "activity"; }
 
   const CARDIO_MACHINES = [
     { key:"treadmill",  name:"Treadmill",
@@ -3991,7 +4063,7 @@
       const on = m.key === cur.key;
       const del = customMachines.some(c=>c.key === m.key)
         ? `<span class="mx" role="button" tabindex="0" data-del="${esc(m.key)}"
-                 aria-label="Delete ${esc(m.name)}">${ico("x",14)}</span>` : "";
+                 title="Delete this machine" aria-label="Delete ${esc(m.name)}">${ico("trash",14)}</span>` : "";
       return `<button type="button" class="machine-btn${on?" on":""}" data-m="${esc(m.key)}"
                       data-focus="machine-${esc(m.key)}" aria-pressed="${on}">${ico(machineIcon(m.key),17)}${esc(m.name)}${del}</button>`;
     }).join("");
@@ -4073,7 +4145,7 @@
                  value="${String(ss).padStart(2,"0")}" placeholder="00" aria-label="Interval ${i+1} seconds">
         </span>
         <button type="button" class="rm" data-rm="${i}" data-focus="iv-${i}-rm"
-                aria-label="Remove interval ${i+1}">${ico("x",16)}</button>
+                title="Remove this interval" aria-label="Remove interval ${i+1}">${ico("x",16)}</button>
       </div>`;
     }).join("");
 
@@ -4156,7 +4228,7 @@
         <div class="pbtns">
           <button type="button" class="go"  data-run="${esc(pl.key)}">Start</button>
           <button type="button" data-load="${esc(pl.key)}">Edit</button>
-          <button type="button" class="del" data-del="${esc(pl.key)}" aria-label="Delete ${esc(pl.name)}">${ico("x",14)}</button>
+          <button type="button" class="del" data-del="${esc(pl.key)}" title="Delete this preset" aria-label="Delete ${esc(pl.name)}">${ico("trash",14)}</button>
         </div>
       </div>`;
     }).join("");
@@ -4821,7 +4893,7 @@
             <h3>${esc(lift.name)}</h3>
             <div class="eqline">${ex ? esc(ex.eq) + " · " + esc(ex.g) : CAT_LABEL[lift.cat]}</div>
           </div>
-          <button type="button" class="icon-btn rm remove-lift" aria-label="Stop tracking ${esc(lift.name)}">${ico("x",16)}</button>
+          <button type="button" class="icon-btn rm remove-lift" title="Stop tracking this lift" aria-label="Stop tracking ${esc(lift.name)}">${ico("trash",16)}</button>
         </div>
 
         <div class="pr-caption">Estimated one-rep max</div>
@@ -4847,7 +4919,7 @@
                 <span class="d">${shortDate(e.date)}</span>
                 <span class="w">${e.weight}${unit()} × ${e.reps}</span>
                 ${isBest ? `<span class="pr-flag">PR</span>` : ""}
-                <button type="button" class="del" data-entry="${esc(e.date)}|${e.weight}|${e.reps}" aria-label="Delete entry">${ico("x",14)}</button>
+                <button type="button" class="del" data-entry="${esc(e.date)}|${e.weight}|${e.reps}" title="Delete this entry" aria-label="Delete entry">${ico("trash",14)}</button>
               </div>`;
             }).join("")}
           </div>
@@ -4883,6 +4955,8 @@
       }
 
       card.querySelector(".remove-lift").addEventListener("click", ()=>{
+        const n = lift.entries.length;
+        if(n && !confirm(`Stop tracking ${lift.name}?\n\nIts ${n} logged entr${n>1?"ies":"y"} go with it.`)) return;
         lifts = lifts.filter(l=>l.key !== lift.key);
         persistLifts(); renderRecords(); populateLiftPicker();
         showToast(`Stopped tracking ${lift.name}`);
@@ -4911,7 +4985,9 @@
         btn.addEventListener("click", ()=>{
           const [d,w,r] = btn.dataset.entry.split("|");
           const idx = lift.entries.findIndex(e=> e.date===d && String(e.weight)===w && String(e.reps)===r);
-          if(idx>-1){ lift.entries.splice(idx,1); persistLifts(); renderRecords(); showToast("Entry removed"); }
+          if(idx<0) return;
+          if(!confirm(`Delete ${w}${unit()} × ${r} from ${shortDate(d)}?`)) return;
+          lift.entries.splice(idx,1); persistLifts(); renderRecords(); showToast("Entry removed");
         });
       });
 
@@ -5028,7 +5104,16 @@
   }
 
   async function exportData(){
-    const json = JSON.stringify({ profile, settings, history, lifts, tray, customEx, customSplits }, null, 2);
+    /* Everything the app keeps, not just the parts that existed when this was
+       written. A backup that silently omits your notes, your cardio plans and
+       your split edits is not a backup, and you only find out when you restore. */
+    const json = JSON.stringify({
+      ptp: 1, exportedAt: new Date().toISOString(), version: VER,
+      profile, settings, history, lifts, tray,
+      customEx, customSplits, splitEdits, activeSplit,
+      exPrefs, cardioPlans, cardioLog, cardioMachines: customMachines,
+      cardioDraft: intervals, cardioMachine, theme: load(KEY.theme, "system")
+    }, null, 2);
     const filename = "push-to-play-data.json";
     const api = await getDownloads();
 
@@ -5381,7 +5466,7 @@
     const totalSets = sess.reduce((a,s)=> a + s.items.reduce((b,i)=> b + i.setLog.length, 0), 0);
     const lines = [];
     lines.push(`Push to Play — training log`);
-    lines.push(`${sharerName()} · ${shortDate(from)} – ${shortDate(to)} · ${sess.length} session${sess.length>1?"s":""}, ${totalSets} sets`);
+    lines.push(`${sharerName()} · ${shortDate(from)} – ${shortDate(to)} · ${sess.length} session${sess.length===1?"":"s"}, ${totalSets} sets`);
     lines.push("");
     sess.forEach((s,n)=>{
       const d = fromYmd(s.date);
@@ -5395,7 +5480,7 @@
 
     lines.push("— Load this into Push to Play: Settings → Import —");
     lines.push(encodeLog(sess, profile.name.trim()));
-    return { ok:true, text: lines.join("\n"), meta:`${sess.length} sessions · ${totalSets} sets` };
+    return { ok:true, text: lines.join("\n"), meta:`${sess.length} session${sess.length===1?"":"s"} · ${totalSets} set${totalSets===1?"":"s"}` };
   }
 
   let shareScope = "workout";
@@ -5533,11 +5618,17 @@
       return { ok:true, data:obj };
     }
 
-    /* a full "Export as JSON" backup also works */
+    /* A full backup is a restore, not a share. Routing it through the share
+       importer is what reduced it to history alone — that path only understands
+       sessions, so a profile, a directory of your own exercises and every cardio
+       plan went in and did not come out. */
     if(text.startsWith("{")){
       let obj;
       try{ obj = JSON.parse(text); }
       catch(e){ return { ok:false, msg:"That file isn't valid JSON." }; }
+      if(isObj(obj) && (obj.ptp === 1 || isObj(obj.profile) || Array.isArray(obj.customEx))){
+        return { ok:true, data:{ k:"backup", raw:obj } };
+      }
       if(Array.isArray(obj.history)){
         return { ok:true, data:{ v:1, k:"l", by:(obj.profile && obj.profile.name) || "A Push to Play user",
           f: obj.history.length ? obj.history.map(h=>h.date).sort()[0] : todayStr(),
@@ -5612,12 +5703,66 @@
     showToast(parts.length ? `${label} loaded — ${parts.join(", ")}` : "Nothing to load");
   }
 
+  /* Writes every store, then reloads rather than re-rendering: the whole point
+     is that nothing from the previous state survives, and a reload is the only
+     way to be certain of that. */
+  function restoreBackup(o){
+    if(!confirm("Replace everything on this device with this backup?\n\nThis cannot be undone.")) return;
+    const put = (key, v, ok)=>{ if(v !== undefined && (!ok || ok(v))) save(key, v); };
+    put(KEY.profile,        o.profile,        isObj);
+    put(KEY.settings,       o.settings,       isObj);
+    put(KEY.history,        o.history,        arrOfObj);
+    put(KEY.prs,            o.lifts,          arrOfObj);
+    put(KEY.tray,           o.tray,           arrOfObj);
+    put(KEY.customEx,       o.customEx,       arrOfObj);
+    put(KEY.customSplits,   o.customSplits,   arrOfObj);
+    put(KEY.splits,         o.splitEdits,     isObj);
+    put(KEY.activeSplit,    o.activeSplit,    v=> typeof v === "string");
+    put(KEY.exPrefs,        o.exPrefs,        isObj);
+    put(KEY.cardioPlans,    o.cardioPlans,    Array.isArray);
+    put(KEY.cardioLog,      o.cardioLog,      arrOfObj);
+    put(KEY.cardioMachines, o.cardioMachines, Array.isArray);
+    put(KEY.theme,          o.theme,          v=> v === "light" || v === "dark" || v === "system");
+    if(o.cardioDraft !== undefined) save(KEY.cardioPlans + "-draft", o.cardioDraft);
+    if(o.cardioMachine !== undefined) save(KEY.cardioPlans + "-m", o.cardioMachine);
+    showToast("Restored — reloading");
+    setTimeout(()=> location.reload(), 500);
+  }
+
   function renderImport(res){
     if(!res.ok){
       importResult.innerHTML = `<div class="import-result bad"><div class="rtitle">Couldn't read that</div><div class="rsub">${esc(res.msg)}</div></div>`;
       return;
     }
     const d = res.data;
+
+    /* A backup replaces everything, so it says exactly what it holds and what
+       that costs before the button is pressed. */
+    if(d.k === "backup"){
+      const o = d.raw;
+      const n = (v)=> Array.isArray(v) ? v.length : (isObj(v) ? Object.keys(v).length : 0);
+      const bits = [
+        [n(o.history), "logged session"],
+        [n(o.customEx), "exercise you added"],
+        [n(o.lifts), "tracked record"],
+        [n(o.cardioPlans), "cardio preset"],
+        [n(o.cardioLog), "cardio session"],
+        [n(o.exPrefs), "exercise note or default"]
+      ].filter(x=>x[0]).map(([c,label])=> `${c} ${label}${c>1?"s":""}`);
+      importResult.innerHTML = `
+        <div class="import-result">
+          <div class="rtitle">Full backup${o.exportedAt ? " from " + esc(shortDate(o.exportedAt.slice(0,10))) : ""}</div>
+          <div class="rsub">${bits.length ? esc(bits.join(" · ")) : "Settings and profile only"}</div>
+          <div class="import-warn">Restoring replaces everything currently on this
+            device — your history, your own exercises, your records and your cardio.
+            Export first if you want to keep what is here.</div>
+          <div class="share-actions">
+            <button type="button" class="btn btn-danger" id="impRestore">Replace everything with this backup</button>
+          </div>
+        </div>`;
+      document.getElementById("impRestore").addEventListener("click", ()=> restoreBackup(o));
+      return;
+    }
 
     if(d.k === "w"){
       const items = unpackItems(d.ex || []);
