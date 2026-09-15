@@ -19,7 +19,7 @@
 <!-- Shown in Settings so you can tell at a glance which build you are on, and
      what a device that is behaving oddly is actually running. Keep it in step
      with VERSION in sw.js. -->
-<meta name="ptp-version" content="ptp-v13">
+<meta name="ptp-version" content="ptp-v14">
 <meta name="description" content="Push / Pull / Legs / Abs workout tracker — split templates, set-by-set logging, training calendar and personal records.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -403,7 +403,12 @@
   .btn:hover{ color: var(--text); border-color: var(--text-faint); }
   .btn-primary{ background: var(--text); color: var(--bg); border-color: var(--text); font-weight:600; }
   .btn-primary:hover{ color: var(--bg); opacity:.88; }
-  .btn-danger:hover{ color: var(--danger); border-color: var(--danger); }
+  /* Destructive at rest, not only on hover. A phone has no hover, so every
+     "Delete this session" and "Remove this exercise" looked exactly like the
+     harmless button beside it right up until it fired. 4.62:1 on the worst
+     surface it lands on in either theme. */
+  .btn-danger{ color: var(--danger); border-color: color-mix(in oklab, var(--danger) 42%, transparent); }
+  .btn-danger:hover{ border-color: var(--danger); background: color-mix(in oklab, var(--danger) 12%, var(--surface-2)); }
   .panel{ background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); padding:16px; }
 
   .stat-row{ display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin-bottom:18px; }
@@ -670,6 +675,126 @@
   .sess-ex .top{ display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
   .sess-ex .nm{ font-size:13px; font-weight:500; }
   .sess-ex .setline{ font-size:11.5px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; margin-top:4px; }
+
+  /* ---- Editing a logged day ----
+     A logged session is not a receipt. "Log session" is one tap next to the set
+     rows and gets hit early by accident, so every part of the result has to be
+     reachable again: the sets inside an exercise, the order of the exercises,
+     and the date the whole thing sits on. The editor is a block in the flow
+     under the row it belongs to, not a floating panel — the same reason the
+     exercise directory's editor is. */
+  .sess-ex .top{ align-items:center; }
+  .sess-ex .nm-wrap{ display:flex; align-items:center; gap:8px; min-width:0; flex:1 1 auto; }
+  .sess-ex .nm{ min-width:0; overflow-wrap:anywhere; }
+  .sess-ex .top-right{ display:flex; align-items:center; gap:6px; flex:none; }
+  .sess-ex.editing{ border-bottom-left-radius:0; border-bottom-right-radius:0; margin-bottom:0; }
+  .sess-editor{
+    background: var(--surface); border:1px solid var(--border);
+    border-left:3px solid var(--item-color); border-top:none;
+    border-radius:0 0 8px 8px; padding:12px 11px 11px; margin-bottom:7px;
+  }
+  .sess-editor .ed-sub{ font-size:11px; color: var(--text-faint); margin:0 0 10px;
+    text-transform:uppercase; letter-spacing:.05em; }
+  .sess-set-head, .sess-set-row{
+    display:grid; grid-template-columns: 52px minmax(0,1fr) minmax(0,1fr) 34px 30px;
+    gap:7px; align-items:center;
+  }
+  .sess-set-head{ font-size:10px; text-transform:uppercase; letter-spacing:.05em;
+    color: var(--text-faint); margin-bottom:5px; }
+  .sess-set-row{ margin-bottom:6px; }
+  .sess-set-row .snum{ font-size:11px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; }
+  .sess-set-row input[type="text"]{
+    background: var(--surface-2); border:1px solid var(--border-strong); border-radius:7px;
+    color: var(--text); padding:7px 8px; font-size:13px; font-family:inherit; width:100%;
+    min-width:0;
+  }
+  /* 34px wide and 34px tall: the smallest square a thumb reliably hits, and the
+     reason the done tick and the set's bin are not crammed against the inputs. */
+  .sess-set-row .mini{
+    width:34px; height:34px; flex:none; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--border-strong); background: var(--surface-2); color: var(--text-faint);
+    border-radius:7px; cursor:pointer; padding:0;
+  }
+  .sess-set-row .mini:hover{ color: var(--text); border-color: var(--text-faint); }
+  .sess-set-row .mini[aria-pressed="true"]{
+    background: var(--item-color); border-color: var(--item-color); color: var(--item-ink);
+  }
+  .sess-set-row .mini.drop{ width:30px; }
+  .sess-set-row .mini.drop:hover{ color: var(--danger); border-color: var(--danger); }
+  .sess-editor .ed-actions{ margin-top:11px; padding-top:10px; border-top:1px solid var(--border-soft); }
+
+  /* Cardio intervals do not fit the lifting grid: a machine has as many dials as
+     it has, from the stairmaster's one to whatever a custom machine declares, so
+     the column count is a variable rather than a constant. */
+  .iv-head, .iv-row{
+    display:grid; gap:6px; align-items:center;
+    grid-template-columns: 26px repeat(var(--dials,1), minmax(0,1fr)) 52px 64px;
+  }
+  .iv-head{ font-size:10px; text-transform:uppercase; letter-spacing:.05em;
+    color: var(--text-faint); margin-bottom:5px; }
+  .iv-row{ margin-bottom:6px; }
+  .iv-row .snum{ font-size:11px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; }
+  .iv-row input[type="text"]{
+    background: var(--surface-2); border:1px solid var(--border-strong); border-radius:7px;
+    color: var(--text); padding:7px 8px; font-size:13px; font-family:inherit; width:100%; min-width:0;
+  }
+  .iv-row .iv-btns{ display:flex; gap:4px; justify-content:flex-end; }
+  .iv-row .iv-btns button{
+    width:30px; height:30px; flex:none; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--border-strong); background: var(--surface-2); color: var(--text-faint);
+    border-radius:7px; cursor:pointer; padding:0;
+  }
+  .iv-row .iv-btns button:hover:not(:disabled){ color: var(--text); border-color: var(--text-faint); }
+  .iv-row .iv-btns button:disabled{ opacity:.3; cursor:default; }
+  .iv-row .iv-btns .drop:hover{ color: var(--danger); border-color: var(--danger); }
+  .ed-field{ display:flex; flex-direction:column; gap:5px; margin-bottom:12px;
+    font-size:10px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); }
+  .ed-field input{
+    background: var(--surface-2); border:1px solid var(--border-strong); border-radius:7px;
+    color: var(--text); padding:8px 10px; font-size:13px; font-family:inherit;
+    text-transform:none; letter-spacing:0; width:100%;
+  }
+
+  /* The move controls: two arrows that reorder within the day, then the date row
+     that moves the day itself. They look different because they do different
+     things — conflating them is the whole confusion this feature exists to end. */
+  .row-move{ display:flex; gap:5px; flex:none; }
+  .row-move button{
+    width:30px; height:30px; display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--border-strong); background: var(--surface); color: var(--text-faint);
+    border-radius:7px; cursor:pointer; padding:0;
+  }
+  .row-move button:hover:not(:disabled){ color: var(--text); border-color: var(--text-faint); }
+  .row-move button:disabled{ opacity:.3; cursor:default; }
+
+  .move-panel{
+    margin-top:12px; padding:12px 12px 11px; background: var(--surface-2);
+    border:1px solid var(--border-soft); border-radius:8px;
+  }
+  .move-panel .mp-title{ font-size:11px; text-transform:uppercase; letter-spacing:.05em;
+    color: var(--text-faint); margin-bottom:9px; }
+  .move-row{ display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
+  .move-row input[type="date"]{
+    background: var(--surface); border:1px solid var(--border-strong); border-radius:7px;
+    color: var(--text); padding:7px 9px; font-size:12.5px; font-family:inherit; min-width:0;
+  }
+  .move-panel .mp-note{ font-size:10.5px; color: var(--text-faint); margin:9px 0 0; }
+
+  /* The tray silently meant "today". Once it can mean another day, saying which
+     day is not decoration — it is the difference between adding to Tuesday and
+     overwriting Wednesday. */
+  .tray-date{
+    display:flex; align-items:center; gap:7px; margin:0 0 12px; padding:8px 10px;
+    background: var(--surface-3); border:1px solid var(--border-strong);
+    border-radius:7px; font-size:11.5px; color: var(--text-dim);
+  }
+  .tray-date .tico{ flex:none; color: var(--text-dim); }
+  .tray-date strong{ color: var(--text); font-weight:600; }
+  .tray-date button{
+    margin-left:auto; flex:none; border:none; background:none; color: var(--text-faint);
+    cursor:pointer; padding:2px; display:flex; border-radius:5px;
+  }
+  .tray-date button:hover{ color: var(--text); background: var(--surface-2); }
 
   /* ================= Records / PRs ================= */
   .pr-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(330px,1fr)); gap:14px; }
@@ -1306,6 +1431,18 @@
 
     /* Four fields two-up is ~160px each here, which is not a text field. */
     .ed-grid{ grid-template-columns: 1fr; gap: 10px; }
+    .sess-set-head, .sess-set-row{
+      grid-template-columns: 40px minmax(0,1fr) minmax(0,1fr) 34px 30px; gap:5px;
+    }
+    .sess-set-head{ font-size:9.5px; }
+    .sess-set-row{ margin-bottom:5px; }
+    .iv-head, .iv-row{
+      grid-template-columns: 20px repeat(var(--dials,1), minmax(0,1fr)) 44px 60px; gap:4px;
+    }
+    .iv-head{ font-size:9px; }
+    .iv-row input[type="text"]{ padding:7px 5px; font-size:12.5px; }
+    .iv-row .iv-btns button{ width:28px; height:28px; }
+    .sess-set-row input[type="text"]{ padding:7px 6px; font-size:12.5px; }
     .ex-editor{ padding: 12px 11px; }
     .ed-danger{ margin-left: 0; width: 100%; }
     .ed-actions .btn{ flex: 1 1 auto; }
@@ -1481,6 +1618,16 @@
     <div>
       <!-- ============ TRAIN ============ -->
       <section class="view active" id="view-train" data-mode="browse">
+        <!-- Shown only when the tray is aimed at a day that is not today. It sits
+             above the mode switch rather than inside the tray, because on a phone
+             the tray is a mode you have to be in — and the whole point is to know
+             where this is going while you are still browsing for what to add. -->
+        <div class="tray-date" id="trayDateBar" hidden>
+          <span data-ico="calendar" data-ico-size="15"></span>
+          <span>Logging to <strong id="trayDateLabel"></strong></span>
+          <button type="button" id="trayDateClear" title="Log to today instead"
+                  aria-label="Log to today instead" data-ico="x" data-ico-size="14"></button>
+        </div>
         <div class="mode-switch" id="modeSwitch" role="group" aria-label="Train mode">
           <button type="button" data-mode="workout">Workout <span class="ms-count" id="msCount">0</span></button>
           <button type="button" data-mode="browse" class="on">Browse</button>
@@ -2311,7 +2458,8 @@
                 splits:"ptp-splits", activeSplit:"ptp-active-split",
                 customEx:"ptp-custom-ex", customSplits:"ptp-custom-splits",
                 cardioPlans:"ptp-cardio-plans", cardioLog:"ptp-cardio-log",
-                cardioMachines:"ptp-cardio-machines", exPrefs:"ptp-ex-prefs" };
+                cardioMachines:"ptp-cardio-machines", exPrefs:"ptp-ex-prefs",
+                trayDate:"ptp-tray-date" };
 
   /* Everything here comes back from storage that an older version of this app
      wrote, that a sync tool touched, or that a user pasted in by hand. JSON.parse
@@ -2633,6 +2781,22 @@
   tray = normalizeTray(load(KEY.tray, [], arrOfObj));
 
   function persistTray(){ save(KEY.tray, tray); }
+
+  /* The tray used to mean "today" and nothing else, which is why going back to a
+     logged day to add one more exercise was impossible: the button said "Log
+     session to today" and meant it. The tray now carries an optional target date,
+     set when the user opens a day on the calendar and asks to add to it.
+     A stored date that is already in the past when the app reopens is dropped —
+     quietly filing tomorrow's session under last Tuesday because the tray still
+     remembered a date from a week ago is worse than forgetting the date. */
+  let trayDate = load(KEY.trayDate, "", v => typeof v === "string");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(trayDate) || trayDate < todayStr()) trayDate = "";
+  function persistTrayDate(){ save(KEY.trayDate, trayDate); }
+  function trayTarget(){ return trayDate || todayStr(); }
+  function setTrayDate(d){
+    trayDate = (d && d !== todayStr()) ? d : "";
+    persistTrayDate();
+  }
 
   /* ================= Theme ================= */
   function applyTheme(choice){
@@ -3523,6 +3687,8 @@
     if(!tray.length) return;
     Object.keys(timers).forEach(clearItemTimer);
     tray = []; openMenuFor = null;
+    /* The date belongs to the workout that was in the tray, not to the tray. */
+    setTrayDate("");
     persistTray(); renderTray(); renderGroups();
     showToast("Workout cleared");
   });
@@ -3562,7 +3728,23 @@
     btn.addEventListener("click", ()=> setTrainMode(btn.dataset.mode));
   });
 
+  function renderTrayDateBar(){
+    const bar = document.getElementById("trayDateBar");
+    if(!bar) return;
+    bar.hidden = !trayDate;
+    if(trayDate) document.getElementById("trayDateLabel").textContent = prettyDate(trayDate);
+    const log = document.getElementById("logBtn");
+    if(log) log.textContent = trayDate ? "Log session to " + shortDate(trayDate) : "Log session to today";
+  }
+
+  document.getElementById("trayDateClear").addEventListener("click", ()=>{
+    setTrayDate("");
+    renderTray();
+    showToast("Logging to today again");
+  });
+
   function renderSessionHeader(){
+    renderTrayDateBar();
     const msCount = document.getElementById("msCount");
     msCount.textContent = tray.length;
     msCount.dataset.empty = tray.length ? "0" : "1";
@@ -3923,7 +4105,7 @@
   /* ================= Logging a session ================= */
   document.getElementById("logBtn").addEventListener("click", ()=>{
     if(!tray.length){ showToast("Add exercises before logging"); return; }
-    const date = todayStr();
+    const date = trayTarget();
     const session = {
       date,
       loggedAt: new Date().toISOString(),
@@ -3964,11 +4146,17 @@
     } else {
       tray.forEach(t=> t.setLog.forEach(s=> s.done = false));
     }
+    /* The date was a one-trip instruction: it aimed this log at a particular day
+       and is spent once that log lands. Leaving it set would silently aim the
+       next session at the same day too. */
+    const wasDated = date !== todayStr();
+    setTrayDate("");
     persistTray(); renderTray(); renderGroups();
     selectedDay = date;
+    const whenLabel = wasDated ? prettyDate(date) : "today";
     showToast(existing > -1
-      ? "Added " + merged + " exercise" + (merged===1?"":"s") + " to today's session"
-      : "Session logged to today");
+      ? "Added " + merged + " exercise" + (merged===1?"":"s") + " to " + (wasDated ? whenLabel : "today's session")
+      : "Session logged to " + whenLabel);
   });
 
   /* ================= Cardio =================
@@ -4661,46 +4849,300 @@
     }
     calGrid.innerHTML = html;
     calGrid.querySelectorAll(".cal-cell[data-date]").forEach(cell=>{
-      cell.addEventListener("click", ()=>{ selectedDay = cell.dataset.date; renderCalendar(); });
+      cell.addEventListener("click", ()=>{
+        selectedDay = cell.dataset.date;
+        /* An editor is open on one exercise of one day. Carrying it to the next
+           day would silently open whatever sits at the same index there. */
+        closeDayEditors();
+        renderCalendar();
+      });
     });
 
     renderCalStats();
     renderDayDetail();
   }
 
-  /* Cardio blocks for a day, rendered the same way the lifting items are so the
-     day reads as one session rather than two feeds. */
-  function cardioBlocks(dateStr){
-    return cardioFor(dateStr).map(c=>{
-      const m = machineByKey(c.machine);
-      const rows = (c.intervals || []).map((iv,n)=>
-        `${n+1}) ${esc(settingsText(m, iv.v || {}))} — ${esc(longClock(iv.sec))}`).join("<br>");
-      const short = c.doneSec < c.totalSec ? ` · stopped at ${clock(c.doneSec)}` : "";
-      return `<div class="sess-ex" style="--item-color: var(--cardio); --item-ink: var(--on-cardio)">
-        <div class="top">
-          <span class="nm">${esc(c.name || m.name)}</span>
-          <span class="badge">${esc(m.name)}</span>
+  /* ================= Editing a logged day =================
+     "Log session" sits one tap from the set rows and gets pressed early — before
+     the last exercise, before the accessory work, on the wrong day. Until now
+     that was final: a logged session could be deleted or reloaded and nothing
+     else. Everything in a day is now reachable again — the sets inside an
+     exercise, the order of the exercises, and the date the day itself sits on. */
+
+  let editSessEx  = null;   // index in sess.items whose editor is open
+  let editCardio  = null;   // id of the cardio entry whose editor is open
+  let movePanel   = false;  // the date-move panel, open or not
+
+  function closeDayEditors(){ editSessEx = null; editCardio = null; movePanel = false; }
+
+  /* Cardio entries were written without an identity — the store is an array and
+     position was the only handle on a row. Reordering or re-dating one makes
+     position a lie, so every entry gets a stable id, old ones on first read. */
+  function cardioId(c){
+    if(!c.cid) c.cid = "c-" + (c.loggedAt || c.date || "") + "-" + Math.random().toString(36).slice(2,7);
+    return c.cid;
+  }
+  /* Written back once: an id that is regenerated on every boot is not an id, and
+     the export/restore round-trip would hand back rows the calendar cannot match. */
+  if(cardioLog.some(c=>!c.cid)){ cardioLog.forEach(cardioId); persistCardioLog(); }
+
+  function cardioById(id){ return cardioLog.find(c=> c.cid === id) || null; }
+
+  /* doneSec and totalSec are derived from the intervals, so editing an interval
+     has to re-derive them. A session the user stopped early keeps its shortfall;
+     one they finished stays finished. */
+  function recalcCardio(c){
+    const total = (c.intervals || []).reduce((a,iv)=> a + (parseInt(iv.sec,10) || 0), 0);
+    const shortBy = Math.max(0, (c.totalSec || 0) - (c.doneSec || 0));
+    c.totalSec = total;
+    c.doneSec  = c.completed ? total : Math.max(0, Math.min(total, total - shortBy));
+  }
+
+  function moveInArray(arr, i, delta){
+    const j = i + delta;
+    if(j < 0 || j >= arr.length) return false;
+    const [item] = arr.splice(i, 1);
+    arr.splice(j, 0, item);
+    return true;
+  }
+
+  function moveBtns(i, len, labelFor){
+    return `<div class="row-move">
+      <button type="button" data-move="up" ${i === 0 ? "disabled" : ""}
+              title="Move up" aria-label="Move ${esc(labelFor)} earlier in the session">${ico("chevron-up",15)}</button>
+      <button type="button" data-move="down" ${i === len-1 ? "disabled" : ""}
+              title="Move down" aria-label="Move ${esc(labelFor)} later in the session">${ico("chevron-down",15)}</button>
+    </div>`;
+  }
+
+  /* ---- Lifting rows ---- */
+  function sessExBlocks(sess){
+    return sess.items.map((i, idx)=>{
+      const open = editSessEx === idx;
+      return `<div class="sess-ex${open ? " editing" : ""}" data-ex-idx="${idx}"
+                   style="--item-color: var(--${i.cat}); --item-ink: var(--on-${i.cat})">
+          <div class="top">
+            <div class="nm-wrap">
+              <span class="nm">${esc(i.n)}</span>
+              <span class="badge">${esc(i.eq)}</span>
+            </div>
+            <div class="top-right">
+              ${moveBtns(idx, sess.items.length, i.n)}
+              <button type="button" class="ex-menu-btn" data-editex="${idx}"
+                      aria-expanded="${open}" title="Edit sets, weights and reps"
+                      aria-label="Edit ${esc(i.n)}">${ico("dots-vertical",16)}</button>
+            </div>
+          </div>
+          <div class="setline">${i.setLog.map((s,n)=> `S${n+1} ${esc(setLabel(s))}${s.done ? ico("check",12,"inline") : ""}`).join("   ")}</div>
         </div>
-        <div class="setline">${clock(c.doneSec)}${short}<br>${rows}</div>
-      </div>`;
+        ${open ? sessExEditor(i, idx) : ""}`;
     }).join("");
   }
 
-  function wireDeleteCardio(){
-    const btn = document.getElementById("delCardio");
-    if(!btn) return;
-    btn.addEventListener("click", ()=>{
-      const n = cardioFor(selectedDay).length;
-      if(!confirm(`Delete ${n} cardio session${n>1?"s":""} on ${prettyDate(selectedDay)}?`)) return;
-      cardioLog = cardioLog.filter(c=>c.date !== selectedDay);
-      persistCardioLog(); renderCalendar(); renderCardioHist();
-      showToast("Cardio deleted");
-    });
+  function sessExEditor(item, idx){
+    const rows = item.setLog.map((s,n)=>`
+      <div class="sess-set-row" data-set="${n}">
+        <span class="snum">Set ${n+1}</span>
+        <input type="text" inputmode="decimal" data-f="weight" data-focus="e-${idx}-${n}-w"
+               value="${esc(s.weight || "")}" placeholder="—" aria-label="Set ${n+1} weight in ${unit()}">
+        <input type="text" inputmode="numeric" data-f="reps" data-focus="e-${idx}-${n}-r"
+               value="${esc(s.reps || "")}" placeholder="—" aria-label="Set ${n+1} reps">
+        <button type="button" class="mini" data-done="${n}" aria-pressed="${!!s.done}"
+                title="${s.done ? "Mark not completed" : "Mark completed"}"
+                aria-label="Set ${n+1} completed">${ico("check",15)}</button>
+        <button type="button" class="mini drop" data-dropset="${n}"
+                title="Delete this set" aria-label="Delete set ${n+1}">${ico("trash",14)}</button>
+      </div>`).join("");
+
+    return `<div class="sess-editor" data-editor-for="${idx}"
+                 style="--item-color: var(--${item.cat}); --item-ink: var(--on-${item.cat})">
+      <div class="ed-head">
+        <h4>${esc(item.n)}</h4>
+        <button type="button" class="ed-close" data-closeex>Done</button>
+      </div>
+      <p class="ed-sub">What you actually lifted — corrections land straight in this day.</p>
+      <div class="sess-set-head">
+        <span></span><span>Weight (${unit()})</span><span>Reps</span><span>Done</span><span></span>
+      </div>
+      ${rows}
+      <div class="ed-actions">
+        <button type="button" class="btn" data-addset>${ico("plus",14,"inline")} Add a set</button>
+        <button type="button" class="btn btn-danger ed-danger" data-dropex>Remove this exercise</button>
+      </div>
+    </div>`;
   }
 
-  function renderDayDetail(){
+  /* ---- Cardio rows ---- */
+  function cardioBlocks(dateStr){
+    const list = cardioFor(dateStr);
+    return list.map((c, idx)=>{
+      const m = machineByKey(c.machine);
+      const open = editCardio === c.cid;
+      const rows = (c.intervals || []).map((iv,n)=>
+        `${n+1}) ${esc(settingsText(m, iv.v || {}))} — ${esc(longClock(iv.sec))}`).join("<br>");
+      const short = c.doneSec < c.totalSec ? ` · stopped at ${clock(c.doneSec)}` : "";
+      return `<div class="sess-ex${open ? " editing" : ""}" data-cid="${esc(c.cid)}"
+                   style="--item-color: var(--cardio); --item-ink: var(--on-cardio)">
+        <div class="top">
+          <div class="nm-wrap">
+            <span class="nm">${esc(c.name || m.name)}</span>
+            <span class="badge">${esc(m.name)}</span>
+          </div>
+          <div class="top-right">
+            ${moveBtns(idx, list.length, c.name || m.name)}
+            <button type="button" class="ex-menu-btn" data-editcardio="${esc(c.cid)}"
+                    aria-expanded="${open}" title="Edit this cardio session"
+                    aria-label="Edit ${esc(c.name || m.name)}">${ico("dots-vertical",16)}</button>
+          </div>
+        </div>
+        <div class="setline">${clock(c.doneSec)}${short}<br>${rows}</div>
+      </div>
+      ${open ? cardioEditor(c, m) : ""}`;
+    }).join("");
+  }
+
+  function cardioEditor(c, m){
+    const ivs   = c.intervals || [];
+    const dials = Math.max(m.fields.length, 1);
+    const head  = `<div class="iv-head" style="--dials:${dials}">
+      <span>#</span>
+      ${m.fields.length ? m.fields.map(f=>`<span>${esc(f.label)}</span>`).join("") : `<span>Stage</span>`}
+      <span>Min</span><span></span>
+    </div>`;
+
+    const rows = ivs.map((iv,n)=>{
+      const mm = Math.floor((iv.sec||0)/60);
+      const dial = m.fields.length
+        ? m.fields.map(f=>`<input type="text" inputmode="decimal" data-iv="${n}" data-k="${esc(f.k)}"
+              data-focus="c-${n}-${esc(f.k)}" value="${esc((iv.v||{})[f.k] ?? "")}" placeholder="—"
+              aria-label="Interval ${n+1} ${esc(f.label.toLowerCase())}">`).join("")
+        : `<input type="text" data-iv="${n}" data-k="note" data-focus="c-${n}-note"
+              value="${esc((iv.v||{}).note ?? "")}" placeholder="Stage" maxlength="18"
+              aria-label="Interval ${n+1} label">`;
+      return `<div class="iv-row" data-ivrow="${n}" style="--dials:${dials}">
+        <span class="snum">${n+1}</span>
+        ${dial}
+        <input type="text" inputmode="numeric" data-iv="${n}" data-k="min" data-focus="c-${n}-min"
+               value="${mm || ""}" placeholder="0" aria-label="Interval ${n+1} minutes">
+        <span class="iv-btns">
+          <button type="button" data-ivmove="up" data-iv="${n}" ${n===0?"disabled":""}
+                  title="Move up" aria-label="Move interval ${n+1} earlier">${ico("chevron-up",14)}</button>
+          <button type="button" class="drop" data-dropiv="${n}"
+                  title="Delete this interval" aria-label="Delete interval ${n+1}">${ico("trash",14)}</button>
+        </span>
+      </div>`;
+    }).join("");
+
+    return `<div class="sess-editor" data-cardio-editor="${esc(c.cid)}"
+                 style="--item-color: var(--cardio); --item-ink: var(--on-cardio)">
+      <div class="ed-head">
+        <h4>${esc(c.name || m.name)}</h4>
+        <button type="button" class="ed-close" data-closecardio>Done</button>
+      </div>
+      <label class="ed-field">What you called it
+        <input type="text" data-cname data-focus="c-name" value="${esc(c.name || "")}"
+               placeholder="${esc(m.name)}" maxlength="40"></label>
+      ${ivs.length ? head + rows : `<p class="ed-sub">No intervals recorded on this session.</p>`}
+      <div class="ed-actions">
+        <button type="button" class="btn btn-danger ed-danger" data-dropcardio>Delete this cardio session</button>
+      </div>
+    </div>`;
+  }
+
+  /* ---- The day's own actions ---- */
+  function dayActions(hasSess, cardioCount){
+    const isToday = selectedDay === todayStr();
+    const parts = [];
+    /* The tray, aimed at this day. This is the answer to "I logged too early":
+       nothing is copied, nothing is removed, and whatever is logged next merges
+       into this day's entry. There is no path here that can duplicate a set. */
+    parts.push(`<button type="button" class="btn btn-primary" id="addToDay">${ico("plus",14,"inline")} Add exercises to this day</button>`);
+    /* Copying a logged day into the tray only makes sense when it lands somewhere
+       else. Offered on today's own day it would merge the copy back into the very
+       session it came from and double every set — so on today it is not offered. */
+    if(hasSess && !isToday){
+      parts.push(`<button type="button" class="btn" id="repeatSess">Repeat this workout today</button>`);
+    }
+    if(hasSess || cardioCount){
+      parts.push(`<button type="button" class="btn" id="moveSess" aria-expanded="${movePanel}">${ico("calendar",14,"inline")} Move this day…</button>`);
+    }
+    if(hasSess) parts.push(`<button type="button" class="btn btn-danger" id="delSess">Delete this session</button>`);
+    if(cardioCount) parts.push(`<button type="button" class="btn btn-danger" id="delCardio">Delete cardio</button>`);
+    if(!hasSess && !cardioCount){
+      parts.push(`<button type="button" class="btn" id="goCardio">Cardio</button>`);
+    }
+    return `<div class="form-actions">${parts.join("")}</div>`;
+  }
+
+  function movePanelHtml(hasSess, cardioCount){
+    if(!movePanel) return "";
+    const both = hasSess && cardioCount;
+    return `<div class="move-panel">
+      <div class="mp-title">Move this day to another date</div>
+      <div class="move-row">
+        <button type="button" class="btn" data-shift="-1">${ico("chevron-left",14,"inline")} Day earlier</button>
+        <button type="button" class="btn" data-shift="1">Day later ${ico("chevron-right",14,"inline")}</button>
+        <input type="date" id="moveDate" value="${esc(selectedDay)}" aria-label="Move this day to">
+        <button type="button" class="btn btn-primary" id="moveGo">Move</button>
+      </div>
+      <p class="mp-note">${both
+        ? "The workout and the cardio move together."
+        : (hasSess ? "The whole workout moves — the sets stay as they are."
+                   : "The cardio logged on this day moves.")}
+        If something is already logged on the day you pick, this is added to it.</p>
+    </div>`;
+  }
+
+  /* Re-dating is a merge, not a move: the target day may already hold work.
+     Same rule as logging — the same exercise twice in a day appends its sets,
+     because that is what a two-a-day is. */
+  function moveDayTo(target){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(target)){ showToast("Pick a valid date"); return; }
+    if(target === selectedDay){ showToast("That is already this day"); return; }
     const sess = sessionFor(selectedDay);
     const card = cardioFor(selectedDay);
+    if(!sess && !card.length) return;
+
+    if(sess){
+      const destIdx = history.findIndex(h=>h.date === target);
+      if(destIdx > -1){
+        const day = history[destIdx];
+        if(!Array.isArray(day.items)) day.items = [];
+        sess.items.forEach(item=>{
+          const prev = day.items.find(p=> p.id === item.id);
+          if(prev){
+            prev.setLog = (Array.isArray(prev.setLog) ? prev.setLog : []).concat(item.setLog);
+            prev.sets = prev.setLog.length;
+          } else { day.items.push(item); }
+        });
+        history = history.filter(h=> h !== sess);
+      } else {
+        sess.date = target;
+      }
+      history.sort((a,b)=> a.date < b.date ? 1 : -1);
+      save(KEY.history, history);
+    }
+    if(card.length){
+      card.forEach(c=> c.date = target);
+      persistCardioLog();
+      renderCardioHist();
+    }
+    closeDayEditors();
+    selectedDay = target;
+    calCursor = fromYmd(target);
+    renderCalendar();
+    showToast("Moved to " + prettyDate(target));
+  }
+
+  function renderDayDetail__body(){
+    const sess = sessionFor(selectedDay);
+    const card = cardioFor(selectedDay);
+    /* An editor left open on an exercise that is no longer there renders nothing
+       and looks like a bug. */
+    if(sess && editSessEx != null && !sess.items[editSessEx]) editSessEx = null;
+    if(!sess) editSessEx = null;
+    if(editCardio && !card.some(c=>c.cid === editCardio)) editCardio = null;
+
     if(!sess){
       dayDetail.innerHTML = `
         <h3>${prettyDate(selectedDay)}</h3>
@@ -4708,16 +5150,9 @@
           ? `${card.length} cardio session${card.length>1?"s":""} · ${clock(card.reduce((a,c)=>a+(c.doneSec||0),0))}`
           : "No session logged on this day."}</div>
         ${cardioBlocks(selectedDay)}
-        <div class="form-actions">
-          <button type="button" class="btn" id="goTrain">Build a workout</button>
-          <button type="button" class="btn" id="goCardio">Cardio</button>
-          ${card.length ? `<button type="button" class="btn btn-danger" id="delCardio">Delete cardio</button>` : ""}
-        </div>`;
-      const b = document.getElementById("goTrain");
-      if(b) b.addEventListener("click", ()=> setView("train"));
-      const c2 = document.getElementById("goCardio");
-      if(c2) c2.addEventListener("click", ()=> setView("cardio"));
-      wireDeleteCardio();
+        ${dayActions(false, card.length)}
+        ${movePanelHtml(false, card.length)}`;
+      wireDayDetail(null);
       return;
     }
     const doneSets = sess.items.reduce((a,i)=> a + i.setLog.filter(s=>s.done).length, 0);
@@ -4727,40 +5162,255 @@
     dayDetail.innerHTML = `
       <h3>${prettyDate(selectedDay)}</h3>
       <div class="dsub">${sess.items.length} exercise${sess.items.length>1?"s":""} · ${doneSets}/${totalSets} sets completed · ${cats.map(c=>CAT_LABEL[c]).join(" + ")}${card.length ? ` + ${clock(card.reduce((a,c)=>a+(c.doneSec||0),0))} cardio` : ""}</div>
-      ${sess.items.map(i=>`
-        <div class="sess-ex" style="--item-color: var(--${i.cat}); --item-ink: var(--on-${i.cat})">
-          <div class="top">
-            <span class="nm">${esc(i.n)}</span>
-            <span class="badge">${esc(i.eq)}</span>
-          </div>
-          <div class="setline">${i.setLog.map((s,n)=> `S${n+1} ${esc(setLabel(s))}${s.done ? ico("check",12,"inline") : ""}`).join("   ")}</div>
-        </div>`).join("")}
+      ${sessExBlocks(sess)}
       ${cardioBlocks(selectedDay)}
-      <div class="form-actions">
-        <button type="button" class="btn" id="reloadSess">Load into workout tray</button>
-        <button type="button" class="btn btn-danger" id="delSess">Delete this session</button>
-        ${card.length ? `<button type="button" class="btn btn-danger" id="delCardio">Delete cardio</button>` : ""}
-      </div>`;
-    wireDeleteCardio();
+      ${dayActions(true, card.length)}
+      ${movePanelHtml(true, card.length)}`;
+    wireDayDetail(sess);
+  }
 
-    document.getElementById("reloadSess").addEventListener("click", ()=>{
+  function saveHistory(){ save(KEY.history, history); }
+
+  function patchSetline(idx, item){
+    const line = dayDetail.querySelector(`.sess-ex[data-ex-idx="${idx}"] .setline`);
+    if(!line) return;
+    line.innerHTML = item.setLog.map((s,n)=>
+      `S${n+1} ${esc(setLabel(s))}${s.done ? ico("check",12,"inline") : ""}`).join("   ");
+  }
+
+  function wireDayDetail(sess){
+    const card = cardioFor(selectedDay);
+
+    /* ---- per-exercise ---- */
+    if(sess){
+      dayDetail.querySelectorAll(".sess-ex[data-ex-idx]").forEach(rowEl=>{
+        const idx = parseInt(rowEl.dataset.exIdx, 10);
+        rowEl.querySelectorAll(".row-move button[data-move]").forEach(b=>{
+          b.addEventListener("click", ()=>{
+            if(!moveInArray(sess.items, idx, b.dataset.move === "up" ? -1 : 1)) return;
+            /* The open editor follows the row it belongs to, not the slot. */
+            if(editSessEx === idx) editSessEx = idx + (b.dataset.move === "up" ? -1 : 1);
+            else if(editSessEx != null) editSessEx = null;
+            saveHistory(); renderCalendar();
+          });
+        });
+        rowEl.querySelector("[data-editex]").addEventListener("click", ()=>{
+          editSessEx = (editSessEx === idx) ? null : idx;
+          editCardio = null;
+          renderCalendar();
+        });
+      });
+
+      const ed = dayDetail.querySelector(".sess-editor[data-editor-for]");
+      if(ed){
+        const idx  = parseInt(ed.dataset.editorFor, 10);
+        const item = sess.items[idx];
+        ed.querySelector("[data-closeex]").addEventListener("click", ()=>{
+          editSessEx = null; renderCalendar();
+        });
+        ed.querySelectorAll(".sess-set-row[data-set]").forEach(r=>{
+          const n = parseInt(r.dataset.set, 10);
+          r.querySelectorAll("input[data-f]").forEach(inp=>{
+            /* Save, then patch the one line that changed rather than re-rendering.
+               change fires on blur, by which point activeElement is already the
+               next field — so a full re-render here destroys the element the
+               user just tabbed into and the caret lands on <body>. Nothing else
+               on the page depends on a weight: the calendar dots are categories
+               and the set counts only move when a set is added or ticked. */
+            inp.addEventListener("change", ()=>{
+              item.setLog[n][inp.dataset.f] = inp.value.trim();
+              saveHistory();
+              patchSetline(idx, item);
+            });
+          });
+          r.querySelector("[data-done]").addEventListener("click", ()=>{
+            item.setLog[n].done = !item.setLog[n].done;
+            saveHistory(); renderCalendar();
+          });
+          r.querySelector("[data-dropset]").addEventListener("click", ()=>{
+            if(item.setLog.length <= 1){
+              showToast("An exercise needs at least one set — remove the exercise instead");
+              return;
+            }
+            item.setLog.splice(n, 1);
+            item.sets = item.setLog.length;
+            saveHistory(); renderCalendar();
+          });
+        });
+        ed.querySelector("[data-addset]").addEventListener("click", ()=>{
+          if(item.setLog.length >= 20){ showToast("20 sets is the limit for one exercise"); return; }
+          item.setLog.push({reps:"", weight:"", done:false});
+          item.sets = item.setLog.length;
+          saveHistory(); renderCalendar();
+        });
+        ed.querySelector("[data-dropex]").addEventListener("click", ()=>{
+          if(!confirm(`Remove ${item.n} from ${prettyDate(selectedDay)}? Its sets are deleted.`)) return;
+          sess.items.splice(idx, 1);
+          editSessEx = null;
+          /* A day with no exercises left is not a session. */
+          if(!sess.items.length) history = history.filter(h=> h !== sess);
+          saveHistory(); renderCalendar();
+          showToast(sess.items.length ? "Exercise removed" : "Session deleted — it had nothing left");
+        });
+      }
+    }
+
+    /* ---- per-cardio ---- */
+    dayDetail.querySelectorAll(".sess-ex[data-cid]").forEach(rowEl=>{
+      const cid = rowEl.dataset.cid;
+      const idx = card.findIndex(c=>c.cid === cid);
+      rowEl.querySelectorAll(".row-move button[data-move]").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          const j = idx + (b.dataset.move === "up" ? -1 : 1);
+          if(j < 0 || j >= card.length) return;
+          /* cardioLog holds every day at once, so reordering within a day means
+             swapping the two entries where they sit in the whole store. */
+          const a = cardioLog.indexOf(card[idx]), bpos = cardioLog.indexOf(card[j]);
+          if(a < 0 || bpos < 0) return;
+          const tmp = cardioLog[a]; cardioLog[a] = cardioLog[bpos]; cardioLog[bpos] = tmp;
+          persistCardioLog(); renderCalendar(); renderCardioHist();
+        });
+      });
+      rowEl.querySelector("[data-editcardio]").addEventListener("click", ()=>{
+        editCardio = (editCardio === cid) ? null : cid;
+        editSessEx = null;
+        renderCalendar();
+      });
+    });
+
+    const ced = dayDetail.querySelector(".sess-editor[data-cardio-editor]");
+    if(ced){
+      const c = cardioById(ced.dataset.cardioEditor);
+      if(c){
+        ced.querySelector("[data-closecardio]").addEventListener("click", ()=>{
+          editCardio = null; renderCalendar();
+        });
+        ced.querySelector("[data-cname]").addEventListener("change", (e)=>{
+          c.name = e.target.value.trim();
+          persistCardioLog(); renderCalendar(); renderCardioHist();
+        });
+        ced.querySelectorAll("input[data-iv]").forEach(inp=>{
+          inp.addEventListener("change", ()=>{
+            const n = parseInt(inp.dataset.iv, 10);
+            const iv = (c.intervals || [])[n];
+            if(!iv) return;
+            if(inp.dataset.k === "min"){
+              const mins = Math.max(0, Math.min(600, parseInt(inp.value,10) || 0));
+              const ss = (iv.sec || 0) % 60;
+              iv.sec = mins*60 + ss;
+              /* Zeroing the only duration would log a session of no length. */
+              if(iv.sec <= 0) iv.sec = 60;
+            } else {
+              iv.v = iv.v || {};
+              iv.v[inp.dataset.k] = inp.value.trim();
+            }
+            recalcCardio(c);
+            persistCardioLog(); renderCalendar(); renderCardioHist();
+          });
+        });
+        ced.querySelectorAll("[data-ivmove]").forEach(b=>{
+          b.addEventListener("click", ()=>{
+            const n = parseInt(b.dataset.iv, 10);
+            if(!moveInArray(c.intervals || [], n, -1)) return;
+            persistCardioLog(); renderCalendar();
+          });
+        });
+        ced.querySelectorAll("[data-dropiv]").forEach(b=>{
+          b.addEventListener("click", ()=>{
+            const n = parseInt(b.dataset.dropiv, 10);
+            if((c.intervals || []).length <= 1){
+              showToast("Delete the cardio session instead of its last interval");
+              return;
+            }
+            c.intervals.splice(n, 1);
+            recalcCardio(c);
+            persistCardioLog(); renderCalendar(); renderCardioHist();
+          });
+        });
+        ced.querySelector("[data-dropcardio]").addEventListener("click", ()=>{
+          if(!confirm(`Delete ${c.name || machineByKey(c.machine).name} on ${prettyDate(selectedDay)}?`)) return;
+          cardioLog = cardioLog.filter(x=> x.cid !== c.cid);
+          editCardio = null;
+          persistCardioLog(); renderCalendar(); renderCardioHist();
+          showToast("Cardio session deleted");
+        });
+      }
+    }
+
+    /* ---- day-level ---- */
+    const add = document.getElementById("addToDay");
+    if(add) add.addEventListener("click", ()=>{
+      setTrayDate(selectedDay);
+      closeDayEditors();
+      setView("train");
+      renderTray();
+      showToast(trayDate
+        ? "Tray is logging to " + shortDate(selectedDay) + " — add what you missed"
+        : "Add what you missed, then log it");
+    });
+
+    const rep = document.getElementById("repeatSess");
+    if(rep && sess) rep.addEventListener("click", ()=>{
+      /* A copy aimed at today. The source day keeps its own record — this is
+         "do this again", not "move this". */
+      let added = 0;
       sess.items.forEach(i=>{
         if(tray.some(t=>t.id===i.id)) return;
         const ex = EX.find(e=>e.id===i.id) || {id:i.id, n:i.n, cat:i.cat, eq:i.eq};
-        const item = makeTrayItem(ex, i.sets);
-        item.setLog = i.setLog.map(s=>({reps:s.reps, weight:s.weight || "", done:false}));
-        tray.push(item);
+        const it = makeTrayItem(ex, i.setLog.length);
+        it.setLog = i.setLog.map(s=>({reps:s.reps, weight:s.weight || "", done:false}));
+        tray.push(it); added++;
       });
+      setTrayDate("");
       persistTray(); renderTray(); renderGroups();
       setView("train");
-      showToast("Loaded into your workout tray");
+      showToast(added ? "Loaded into today's workout" : "Those exercises are already in your workout");
     });
-    document.getElementById("delSess").addEventListener("click", ()=>{
+
+    const mv = document.getElementById("moveSess");
+    if(mv) mv.addEventListener("click", ()=>{
+      movePanel = !movePanel;
+      if(movePanel){ editSessEx = null; editCardio = null; }
+      renderCalendar();
+    });
+
+    const panel = dayDetail.querySelector(".move-panel");
+    if(panel){
+      panel.querySelectorAll("[data-shift]").forEach(b=>{
+        b.addEventListener("click", ()=>{
+          const d = fromYmd(selectedDay);
+          d.setDate(d.getDate() + parseInt(b.dataset.shift, 10));
+          moveDayTo(ymd(d));
+        });
+      });
+      panel.querySelector("#moveGo").addEventListener("click", ()=>{
+        moveDayTo(document.getElementById("moveDate").value);
+      });
+    }
+
+    const del = document.getElementById("delSess");
+    if(del) del.addEventListener("click", ()=>{
+      const n = sess ? sess.items.length : 0;
+      if(!confirm(`Delete the whole session on ${prettyDate(selectedDay)}? ${n} exercise${n===1?"":"s"} and every set.`)) return;
       history = history.filter(h=>h.date !== selectedDay);
-      save(KEY.history, history);
+      closeDayEditors();
+      saveHistory();
       renderCalendar();
       showToast("Session deleted");
     });
+
+    const delC = document.getElementById("delCardio");
+    if(delC) delC.addEventListener("click", ()=>{
+      const n = cardioFor(selectedDay).length;
+      if(!confirm(`Delete ${n} cardio session${n>1?"s":""} on ${prettyDate(selectedDay)}?`)) return;
+      cardioLog = cardioLog.filter(c=>c.date !== selectedDay);
+      closeDayEditors();
+      persistCardioLog(); renderCalendar(); renderCardioHist();
+      showToast("Cardio deleted");
+    });
+
+    const gc = document.getElementById("goCardio");
+    if(gc) gc.addEventListener("click", ()=> setView("cardio"));
   }
 
   document.getElementById("calPrev").addEventListener("click", ()=>{
@@ -4770,7 +5420,7 @@
     calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth()+1, 1); renderCalendar();
   });
   document.getElementById("calToday").addEventListener("click", ()=>{
-    calCursor = new Date(); selectedDay = todayStr(); renderCalendar();
+    calCursor = new Date(); selectedDay = todayStr(); closeDayEditors(); renderCalendar();
   });
 
   /* ================= Records / PRs ================= */
@@ -5112,7 +5762,8 @@
       profile, settings, history, lifts, tray,
       customEx, customSplits, splitEdits, activeSplit,
       exPrefs, cardioPlans, cardioLog, cardioMachines: customMachines,
-      cardioDraft: intervals, cardioMachine, theme: load(KEY.theme, "system")
+      cardioDraft: intervals, cardioMachine, trayDate,
+      theme: load(KEY.theme, "system")
     }, null, 2);
     const filename = "push-to-play-data.json";
     const api = await getDownloads();
@@ -5149,7 +5800,7 @@
 
   document.getElementById("resetBtn").addEventListener("click", ()=>{
     acctMenu.classList.remove("open");
-    if(!confirm("Reset everything — profile, settings, workout history and records? This cannot be undone.")) return;
+    if(!confirm("Reset everything — profile, settings, workout and cardio history, records, your own exercises and splits? This cannot be undone.")) return;
     Object.keys(timers).forEach(clearItemTimer);
     profile  = Object.assign({}, DEFAULT_PROFILE);
     settings = Object.assign({}, DEFAULT_SETTINGS);
@@ -5161,14 +5812,32 @@
     pickerFor   = null;
     customEx    = [];
     customSplits = [];
+    /* "Everything" has to mean everything. This list used to stop at the nine
+       stores that existed when it was written, so a reset left every exercise
+       note, every cardio plan and the whole cardio log in place — and the user
+       had been told the opposite. Anything added to KEY belongs here too. */
+    exPrefs        = {};
+    cardioPlans    = [];
+    cardioLog      = [];
+    customMachines = [];
+    intervals      = [];
+    cardioMachine  = CARDIO_MACHINES[0].key;
+    trayDate       = "";
+    closeDayEditors();
     mountCustomEx();
-    [KEY.profile, KEY.settings, KEY.history, KEY.prs, KEY.tray, KEY.splits, KEY.activeSplit,
-     KEY.customEx, KEY.customSplits].forEach(k=>{
+    Object.keys(KEY).forEach(name=>{
+      /* The theme is a display choice, not data — resetting the data should not
+         throw the user back into a colour scheme they did not pick. */
+      if(name === "theme") return;
+      try{ localStorage.removeItem(KEY[name]); }catch(e){}
+    });
+    [KEY.cardioPlans + "-draft", KEY.cardioPlans + "-m"].forEach(k=>{
       try{ localStorage.removeItem(k); }catch(e){}
     });
     refreshExerciseLists();
     renderIdentity(); renderTiles(); renderTray(); renderGroups(); populateLiftPicker();
     fillAccountForm(); fillSettingsForm(); renderSplitLoader();
+    renderCardio(); renderCalendar();
     showToast("Everything reset");
   });
 
@@ -5723,6 +6392,9 @@
     put(KEY.cardioLog,      o.cardioLog,      arrOfObj);
     put(KEY.cardioMachines, o.cardioMachines, Array.isArray);
     put(KEY.theme,          o.theme,          v=> v === "light" || v === "dark" || v === "system");
+    /* The tray's target day travels with the tray, or restoring mid-workout logs
+       the rest of it to the wrong date. The boot guard still drops a stale one. */
+    put(KEY.trayDate,       o.trayDate,       v=> typeof v === "string");
     if(o.cardioDraft !== undefined) save(KEY.cardioPlans + "-draft", o.cardioDraft);
     if(o.cardioMachine !== undefined) save(KEY.cardioPlans + "-m", o.cardioMachine);
     showToast("Restored — reloading");
@@ -6143,6 +6815,10 @@
   function renderGroups(){    keepFocus(groupsEl,    renderGroups__body); }
   function renderTray(){      keepFocus(trayListEl,  renderTray__body); }
   function renderCalendar(){  keepFocus(calGrid,     renderCalendar__body); }
+  /* The day detail is its own element, not part of the grid, and now holds text
+     inputs that re-render on every change. Without its own focus keeper, typing
+     a weight and tabbing to reps put the caret back at the top of the page. */
+  function renderDayDetail(){ keepFocus(dayDetail,   renderDayDetail__body); }
 
   /* ================= Init =================
      Each step is guarded on its own. A render that throws on damaged data used to

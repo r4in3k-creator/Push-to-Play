@@ -299,6 +299,49 @@ Things that look like details and are not:
     deuteranopia. Calendar dots carry category by colour alone, so they also
     carry a shape — circle, square, diamond, bar, triangle.
 
+22. **A logged session is editable in place; the tray is what moves it.** The
+    calendar's day detail owns everything that happens *on* that day — the sets
+    inside an exercise, the order of the exercises, the order of a cardio
+    session's intervals, and the day's own date. Nothing there routes through
+    the tray, because a round trip would mean the day briefly does not exist.
+
+23. **Nothing may copy a logged session into the tray while leaving it in
+    history.** That is what "Load into workout tray" used to do, and because
+    logging merges same-day entries by appending `setLog`, re-logging it doubled
+    every set. The two safe shapes are the only two offered: *Add exercises to
+    this day* copies nothing and only aims the tray's date, and *Repeat this
+    workout today* copies but lands on a different date — so it is hidden on
+    today's own day, where it would merge back into its own source.
+
+24. **`trayDate` is a one-trip instruction, and it is cleared by the log that
+    consumes it.** It also expires: a stored date already in the past when the
+    app reopens is dropped at boot, because silently filing today's session
+    under last Tuesday is worse than forgetting which day was meant. While it is
+    set it must be *visible* — the banner sits above the mode switch, not inside
+    the tray, since on a phone the tray is a mode you have to be in and the
+    whole point is knowing the target while browsing for what to add.
+
+25. **Re-dating a day is a merge, not a move.** The target date may already hold
+    work. It uses the same rule as logging — same exercise twice in a day
+    appends its sets — because that is what a two-a-day is. Lifting and cardio
+    on the same date move together.
+
+26. **Every cardio entry carries a `cid`.** The store is one flat array across
+    all dates, so position was the only handle on a row and reordering or
+    re-dating made position a lie. Old entries are assigned one on first read
+    and written straight back — an id regenerated each boot is not an id.
+
+27. **`.btn-danger` is coloured at rest, not only on hover.** A phone has no
+    hover, so every destructive button looked exactly like the harmless one
+    beside it right up until it fired.
+
+28. **"Reset all data" clears every key in `KEY`** — it iterates the object
+    rather than listing names, plus the two `-draft`/`-m` suffixes, and spares
+    only the theme. The hand-written list it replaced stopped at the nine stores
+    that existed when it was written, so a reset left the cardio log and every
+    exercise note in place while telling the user the opposite. Same rule as
+    the backup: anything added to `KEY` is covered automatically.
+
 ### The share format
 
 ```
