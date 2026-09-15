@@ -342,6 +342,33 @@ Things that look like details and are not:
     exercise note in place while telling the user the opposite. Same rule as
     the backup: anything added to `KEY` is covered automatically.
 
+29. **The catalogue is append-only, and that is load-bearing.** `EX.forEach((e,i)=>
+    e.id = e.cat + "-" + i)` makes an exercise's id its position, and the share
+    codec addresses built-ins by that same position (`EX_INDEX`). Inserting one
+    entry ahead of another silently rewrites every code ever shared and orphans
+    every logged set that referenced the shifted ids. New exercises go at the
+    END of the array, always. The 92 original entries keep their order *and*
+    their names — the split templates reference them by name.
+
+30. **Two source directories, so nothing may hard-code one.** The first 92
+    entries come from ExRx.net and the 325 after them from StrengthLog. The card's
+    source link reads its label from the URL's own hostname (`sourceName()`); it
+    used to print "exrx.net" under every built-in, which became untrue the moment
+    a StrengthLog row rendered. Both are credited in the footer.
+
+31. **Muscle-group chips and the equipment filter are derived from `EX`, never
+    listed.** Adding Forearms & Grip and Neck under Pull, and Kettlebell, Band,
+    Smith Machine, Plate, Sled and Medicine Ball as equipment, needed no change to
+    either control. `CAT_SUB` is the one place a group list is written out by hand,
+    so it is the one place to remember.
+
+32. **Where the two directories describe the same movement with the same
+    equipment, the StrengthLog row is dropped and the app's own name stands** (69
+    of them). Where the match is only approximate — a different grip, a different
+    bar, weighted versus not — BOTH are kept. A near-duplicate costs one row in a
+    searchable list; a wrong merge costs an exercise the user went looking for and
+    could not find.
+
 ### The share format
 
 ```
@@ -364,5 +391,8 @@ before the compact encoding landed keep working.
 
 ---
 
-Exercise names and categories follow [ExRx.net](https://exrx.net/Lists/Directory).
-Each card links back to the directory.
+Exercise names, muscle groups and equipment come from two public directories:
+[ExRx.net](https://exrx.net/Lists/Directory) (the original 92) and
+[StrengthLog](https://www.strengthlog.com/exercise-directory/) (the 325 after
+them). Names and classification only — no instructional text was copied. Each
+card links back to its own source.
