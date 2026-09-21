@@ -369,6 +369,42 @@ Things that look like details and are not:
     searchable list; a wrong merge costs an exercise the user went looking for and
     could not find.
 
+33. **44px is the floor for anything pressed during a set.** The tick on a set row
+    was 20px, then 28px after a first attempt, against a thumb that lands on about
+    44. The visible box still draws at 24px and the rest is padding, so the target
+    grows without the row getting heavier. Same for the icon buttons (40px) and the
+    weight/reps inputs.
+
+34. **Log and Clear are never adjacent, never the same size, never the same
+    colour.** They sat one under the other with an 8px gap, so a thumb aiming for
+    the button pressed every session landed on the one that throws the session
+    away. Log is a filled 52px primary; Clear is a 44px outline in danger red
+    below a rule, and asks first — naming how many completed sets would be lost.
+    Remove-from-workout left the item row for the same reason and now lives at the
+    bottom of the item menu.
+
+35. **The rest timer runs on the wall clock, like the cardio one.** It used to
+    subtract one per `setInterval` tick, which a backgrounded phone throttles to
+    roughly a tick a minute — so a 90-second rest counted to about 88 and stalled.
+    It now reads an end timestamp, and `visibilitychange` reconciles on return
+    rather than trusting whatever the last tick left behind.
+
+36. **Background sound needs all three of: a running timer, unlocked audio, and a
+    media element.** A silent one-second loop plays for the length of a rest —
+    that is what keeps JS timers at full rate and the audio session open, and it is
+    why the loop stops the moment the last timer does (it costs battery). The tone
+    is primed on the tap that starts the rest, because "the timer finished" is not
+    a user gesture. And it is an `<audio>` element, not Web Audio: an AudioContext
+    is suspended in the background and a note scheduled for the future never fires.
+    Both WAVs are generated at runtime — a binary blob would cost more than the
+    twenty lines that build one. If the OS evicts the app, nothing sounds; the
+    notification is the second chance, and no serverless web app can do better.
+
+37. **Tray order is the session's order.** Up / Down / Do next live in the item
+    menu rather than the item row, which is already the most crowded strip in the
+    app and the subject of invariant 34. The menu deliberately stays open on the
+    moved item so a second tap moves it again.
+
 ### The share format
 
 ```

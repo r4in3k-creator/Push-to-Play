@@ -2,7 +2,7 @@
    Goal: the app opens instantly and works with no signal (a gym basement is the
    normal case), while still picking up new versions when there is a connection. */
 
-const VERSION = 'ptp-v15';
+const VERSION = 'ptp-v16';
 
 /* Without these two the app is not an app, so a failure to cache them must fail
    the install and leave the previous version in place. */
