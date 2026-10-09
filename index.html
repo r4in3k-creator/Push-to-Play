@@ -1,8 +1,8 @@
 <meta charset="utf-8">
 <title>Push to Play</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#131519" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#eceeef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14120f" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <!-- "default", not "black-translucent": translucent hands us the strip under the
@@ -19,7 +19,7 @@
 <!-- Shown in Settings so you can tell at a glance which build you are on, and
      what a device that is behaving oddly is actually running. Keep it in step
      with VERSION in sw.js. -->
-<meta name="ptp-version" content="ptp-v16">
+<meta name="ptp-version" content="ptp-v17">
 <meta name="description" content="Push / Pull / Legs / Abs workout tracker — split templates, set-by-set logging, training calendar and personal records.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -31,8 +31,8 @@
      all. The fallback stacks carry the layout until it arrives. -->
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" media="print" onload="this.media='all';this.onload=null"
-      href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap"></noscript>
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400&display=swap"></noscript>
 <style>
   /* ================= Tokens — dark-first (a gym tool lives on a dim screen) =================
      Category hues are the IWF bumper-plate set (red / blue / gold / green), re-stepped so all
@@ -48,23 +48,23 @@
     --sa-b: env(safe-area-inset-bottom, 0px);
     --sa-l: env(safe-area-inset-left, 0px);
 
-    --bg: #131519;
-    --surface: #1b1e23;
-    --surface-2: #23272e;
-    --surface-3: #2c313a;
-    --border: #343a44;
-    --border-soft: #282d35;
-    --text: #e6e8ec;
-    --text-dim: #9aa1ac;
+    --bg: #14120f;
+    --surface: #1b1917;
+    --surface-2: #232020;
+    --surface-3: #2b2825;
+    --border: #35312d;
+    --border-soft: #242120;
+    --text: #ede9e4;
+    --text-dim: #a8a39d;
     /* Was #6b727d, which measured 2.69:1 on --surface-3 — this token carries the
        form labels, the tab labels in their resting state, the calendar day-of-week
        row and the set numbers, so it was the widest contrast failure in the app.
        4.50:1 on the worst surface it lands on. */
-    --text-faint: #9398a0;
+    --text-faint: #9a9590;
     /* Only for the edge of a control the user is meant to type in or press. A 1px
        --border on a card is decoration; on an input it is the entire affordance,
        and 1.46:1 made the fields invisible on a bright screen. */
-    --border-strong: #757a80;
+    --border-strong: #6f6a64;
 
     --push: #c04529;
     --pull: #2c6bb0;
@@ -107,24 +107,31 @@
     --on-abs:  #ffffff;
     --on-cardio: #ffffff;
 
+    /* Two faces, down from three. Inter's tabular figures line a set column up
+       as well as a monospace did, so JetBrains Mono is gone; the serif appears
+       only where a number is the point. */
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
     --grid: #ffffff14;
-    --danger: #e0697a;
+    --danger: #d9736d;
     --radius: 10px;
-    --shadow: 0 10px 28px -14px rgba(0,0,0,.7);
+    /* Structure comes from hairlines and whitespace now. Kept as a token so any
+       rule still referencing it resolves to nothing rather than breaking. */
+    --shadow: none;
   }
 
   @media (prefers-color-scheme: light){
     :root:not([data-theme="dark"]){
-      --bg: #eceeef;
-      --surface: #f9fafa;
+      --bg: #f7f5f2;
+      --surface: #fcfcfc;
       --surface-2: #ffffff;
-      --surface-3: #f1f3f4;
-      --border: #d2d6da;
-      --border-soft: #e2e5e8;
-      --text: #191c20;
-      --text-dim: #5b626b;
-      --text-faint: #676c73;
-      --border-strong: #87898c;
+      --surface-3: #f0eeec;
+      --border: #e3e0dc;
+      --border-soft: #eceae7;
+      --text: #2e2c2a;
+      --text-dim: #5f5c59;
+      --text-faint: #6b6866;
+      --border-strong: #8a8681;
 
       --push: #c04529;
       --pull: #2c6bb0;
@@ -145,22 +152,22 @@
       --on-cardio: #ffffff;
 
       --grid: #0000000f;
-      --danger: #b03040;
-      --shadow: 0 10px 26px -16px rgba(25,28,32,.28);
+      --danger: #a8342f;
+      --shadow: none;
     }
   }
 
   :root[data-theme="light"]{
-    --bg: #eceeef;
-    --surface: #f9fafa;
+    --bg: #f7f5f2;
+    --surface: #fcfcfc;
     --surface-2: #ffffff;
-    --surface-3: #f1f3f4;
-    --border: #d2d6da;
-    --border-soft: #e2e5e8;
-    --text: #191c20;
-    --text-dim: #5b626b;
-    --text-faint: #676c73;
-    --border-strong: #87898c;
+    --surface-3: #f0eeec;
+    --border: #e3e0dc;
+    --border-soft: #eceae7;
+    --text: #2e2c2a;
+    --text-dim: #5f5c59;
+    --text-faint: #6b6866;
+    --border-strong: #8a8681;
 
     --push: #c04529;
     --pull: #2c6bb0;
@@ -181,8 +188,8 @@
     --on-cardio: #ffffff;
 
     --grid: #0000000f;
-    --danger: #b03040;
-    --shadow: 0 10px 26px -16px rgba(25,28,32,.28);
+    --danger: #a8342f;
+    --shadow: none;
   }
 
   *{ box-sizing: border-box; }
@@ -193,15 +200,18 @@
   body{
     background: var(--bg);
     color: var(--text);
-    font-family: 'Work Sans', ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--sans);
     -webkit-font-smoothing: antialiased;
     min-height: 100vh;
   }
-  h1,h2,h3{ font-family:'Oswald', ui-sans-serif, sans-serif; text-transform: uppercase; letter-spacing:.02em; text-wrap: balance; margin:0; }
+  /* Sentence case, not uppercase. A condensed uppercase heading shouts; this
+     system lets size and whitespace carry the hierarchy instead. */
+  h1,h2,h3{ font-family:var(--serif); font-weight:400; text-transform:none;
+            letter-spacing:-.012em; line-height:1.15; text-wrap: balance; margin:0; }
   a{ color: inherit; }
   button{ font-family: inherit; color: inherit; }
   input,select{ font-family: inherit; }
-  .num{ font-family:'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .num{ font-family:var(--sans); font-variant-numeric:tabular-nums; font-variant-numeric: tabular-nums; }
   :focus-visible{ outline:2px solid var(--text-dim); outline-offset:2px; }
 
   @media (prefers-reduced-motion: reduce){
@@ -232,7 +242,7 @@
     background: var(--surface-2); border:1px solid var(--border); border-radius:999px;
     padding:7px 14px; font-size:12.5px; color: var(--text-dim); white-space:nowrap;
   }
-  .count-badge b{ color: var(--text); font-family:'JetBrains Mono',monospace; }
+  .count-badge b{ color: var(--text); font-family:var(--sans); font-variant-numeric:tabular-nums; }
 
   .avatar-btn{
     display:flex; align-items:center; gap:8px; cursor:pointer;
@@ -244,7 +254,7 @@
     width:28px; height:28px; border-radius:50%; flex:none;
     background: var(--surface-3); border:1px solid var(--border);
     display:flex; align-items:center; justify-content:center;
-    font-family:'Oswald',sans-serif; font-size:12px; letter-spacing:.03em; color: var(--text);
+    font-family:var(--sans); font-size:12px; letter-spacing:.03em; color: var(--text);
   }
   .avatar-btn .who{ font-size:12.5px; color: var(--text-dim); max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .avatar-btn .caret{ font-size:9px; color: var(--text-faint); }
@@ -277,7 +287,7 @@
   .viewtab{
     flex:none; white-space:nowrap;
     background:none; border:none; cursor:pointer; padding:10px 15px 11px;
-    font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.05em;
+    font-family:var(--sans); text-transform:uppercase; letter-spacing:.05em;
     font-size:13px; color: var(--text-faint); border-bottom:2px solid transparent; margin-bottom:-1px;
   }
   .viewtab:hover{ color: var(--text-dim); }
@@ -370,12 +380,12 @@
     display: none;
     align-items: center; gap: 8px;
     background: var(--text); color: var(--bg); border: none; border-radius: 999px;
-    padding: 12px 18px; font-family: 'Oswald', sans-serif; text-transform: uppercase;
+    padding: 12px 18px; font-family:var(--sans); text-transform: uppercase;
     letter-spacing: .04em; font-size: 13px; cursor: pointer;
     box-shadow: 0 8px 22px -8px rgba(0,0,0,.55);
   }
   .tray-fab .fab-count{
-    font-family: 'JetBrains Mono', monospace; background: var(--bg); color: var(--text);
+    font-family:var(--sans); font-variant-numeric:tabular-nums; background: var(--bg); color: var(--text);
     border-radius: 999px; padding: 1px 8px; font-size: 12px;
   }
   .tray-fab.show{ display: inline-flex; }
@@ -396,12 +406,14 @@
     font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; color: var(--text-dim);
     background: var(--surface-2); border:1px solid var(--border-soft); border-radius:5px; padding:3px 7px;
   }
+  /* Pills, and only ever one filled button in view. */
   .btn{
-    border:1px solid var(--border); background: var(--surface-2); border-radius:8px;
-    padding:9px 14px; font-size:12.5px; cursor:pointer; color: var(--text-dim);
+    border:1px solid var(--border-strong); background:transparent; border-radius:999px;
+    padding:11px 18px; font-size:13.5px; cursor:pointer; color: var(--text-dim);
+    font-family:var(--sans);
   }
   .btn:hover{ color: var(--text); border-color: var(--text-faint); }
-  .btn-primary{ background: var(--text); color: var(--bg); border-color: var(--text); font-weight:600; }
+  .btn-primary{ background: var(--text); color: var(--bg); border-color: var(--text); font-weight:500; }
   .btn-primary:hover{ color: var(--bg); opacity:.88; }
   /* Destructive at rest, not only on hover. A phone has no hover, so every
      "Delete this session" and "Remove this exercise" looked exactly like the
@@ -409,13 +421,14 @@
      surface it lands on in either theme. */
   .btn-danger{ color: var(--danger); border-color: color-mix(in oklab, var(--danger) 42%, transparent); }
   .btn-danger:hover{ border-color: var(--danger); background: color-mix(in oklab, var(--danger) 12%, var(--surface-2)); }
-  .panel{ background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); padding:16px; }
+  .panel{ background: var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px; }
 
   .stat-row{ display:grid; grid-template-columns: repeat(4,1fr); gap:10px; margin-bottom:18px; }
   @media (max-width:700px){ .stat-row{ grid-template-columns: repeat(2,1fr); } }
-  .stat-tile{ background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); padding:13px 14px; }
+  .stat-tile{ background:transparent; border:0; border-top:1px solid var(--border);
+    border-radius:0; padding:14px 2px 2px; }
   .stat-tile .k{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); }
-  .stat-tile .v{ font-family:'Oswald',sans-serif; font-size:26px; line-height:1.05; margin-top:6px; font-variant-numeric: tabular-nums; }
+  .stat-tile .v{ font-family:var(--serif); font-weight:300; font-size:30px; line-height:1.05; margin-top:6px; font-variant-numeric: tabular-nums; }
   .stat-tile .u{ font-size:11.5px; color: var(--text-dim); margin-top:3px; }
 
   /* ================= Category tiles ================= */
@@ -429,8 +442,8 @@
   }
   .tile:hover{ transform: translateY(-2px); }
   .tile .ring{ width:26px; height:26px; border-radius:50%; border:5px solid var(--tile-color); }
-  .tile .label{ font-family:'Oswald',sans-serif; font-size:15px; text-transform:uppercase; letter-spacing:.04em; }
-  .tile .sub{ font-size:11.5px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; }
+  .tile .label{ font-family:var(--sans); font-size:15px; text-transform:uppercase; letter-spacing:.04em; }
+  .tile .sub{ font-size:11.5px; color: var(--text-dim); font-family:var(--sans); font-variant-numeric:tabular-nums; }
   .tile[data-cat="push"]{ --tile-color: var(--push); --tile-ink: var(--on-push); }
   .tile[data-cat="pull"]{ --tile-color: var(--pull); --tile-ink: var(--on-pull); }
   .tile[data-cat="legs"]{ --tile-color: var(--legs); --tile-ink: var(--on-legs); }
@@ -469,7 +482,7 @@
     white-space:nowrap;
   }
   .sg-chip:hover{ border-color: var(--cat-color); color: var(--text); }
-  .sg-chip .sg-n{ font-family:'JetBrains Mono',monospace; font-size:10.5px; color: var(--text-faint); }
+  .sg-chip .sg-n{ font-family:var(--sans); font-variant-numeric:tabular-nums; font-size:10.5px; color: var(--text-faint); }
   .sg-chip.on{ background: var(--cat-color); border-color: var(--cat-color); color: var(--cat-ink); font-weight:600; }
   .sg-chip.on .sg-n{ color: var(--cat-ink); opacity:.75; }
 
@@ -487,13 +500,20 @@
   /* ================= Exercise list ================= */
   .group{ margin-bottom:22px; }
   .group-head{ display:flex; align-items:baseline; gap:10px; margin-bottom:10px; border-bottom:1px solid var(--border-soft); padding-bottom:6px; }
-  /* The heading is 14.5px Oswald 600 — under the large-text threshold, so it
+  /* The heading is 14.5px and under the large-text threshold, so it
      needs 4.5:1 and the fill colour only reached 3.05–3.94 in dark. */
   .group-head h3{ font-size:14.5px; color: var(--group-text, var(--group-color)); }
-  .group-head .n{ font-size:11.5px; color: var(--text-faint); font-family:'JetBrains Mono',monospace; }
-  .cards{ display:grid; grid-template-columns: repeat(2,1fr); gap:8px; }
+  .group-head .n{ font-size:11.5px; color: var(--text-faint); font-family:var(--sans); font-variant-numeric:tabular-nums; }
+  .cards{ display:grid; grid-template-columns: repeat(2,1fr); gap:0 22px; }
   @media (max-width:700px){ .cards{ grid-template-columns:1fr; } }
-  .card{ background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); padding:11px 12px; display:flex; align-items:center; gap:10px; }
+  .card{ background:transparent; border:0; border-bottom:1px solid var(--border);
+    border-radius:0; padding:12px 2px; display:flex; align-items:center; gap:10px; }
+  .card .name{ position:relative; padding-left:16px; display:inline-block; }
+  .card .name::before{
+    content:""; position:absolute; left:0; top:.52em;
+    width:8px; height:8px; border-radius:50%;
+    background: var(--group-color, var(--text-faint));
+  }
   .card .info{ flex:1; min-width:0; }
   .card .name{ font-size:15px; font-weight:500; }
   .card .meta{ margin-top:3px; display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
@@ -526,25 +546,40 @@
   }
   .tray h2{ font-size:15px; }
   .tray .sub{ font-size:11.5px; color: var(--text-dim); margin:4px 0 12px; }
-  .tray-list{ overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:2px; margin-bottom:10px; }
-  .tray-item{ border:1px solid var(--border-soft); border-left:3px solid var(--item-color, var(--border)); border-radius:8px; padding:10px 10px 9px; background: var(--surface-2); }
+  /* ---- Unboxed ----
+     Each exercise used to be a filled, bordered card with a 3px coloured edge.
+     Nine of them stacked and the screen read as nine competing objects. They are
+     now rows on one sheet, divided by hairlines: the same information as a single
+     object. The category colour survives as an 8px dot on the name — it keeps its
+     exact validated hex and loses ninety per cent of its area. */
+  .tray-list{ overflow-y:auto; display:flex; flex-direction:column; gap:0; padding-right:2px; margin-bottom:10px; }
+  .tray-item{ border:0; border-bottom:1px solid var(--border); border-radius:0;
+    padding:15px 2px 16px; background:transparent; }
+  .tray-list .tray-item:last-child{ border-bottom:0; }
+  /* The dot is a pseudo-element so no markup or script had to change for it. */
+  .ex-name{ position:relative; padding-left:16px; }
+  .ex-name::before{
+    content:""; position:absolute; left:0; top:.52em;
+    width:8px; height:8px; border-radius:50%;
+    background: var(--item-color, var(--text-faint));
+  }
   .tray-item-head{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
   .head-left{ min-width:0; flex:1; }
   .ex-name{ font-size:15px; font-weight:500; line-height:1.32; text-wrap:balance; }
   .head-meta{ display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
   .head-right{ display:flex; align-items:center; gap:5px; flex:none; }
   .sets-field{ display:flex; flex-direction:column; align-items:center; gap:2px; font-size:8.5px; color: var(--text-faint); text-transform:uppercase; letter-spacing:.03em; }
-  .sets-input{ width:48px; text-align:center; background: var(--surface); border:1px solid var(--border-strong); border-radius:7px; color: var(--text); padding:8px 2px; min-height:40px; font-size:15px; font-family:'JetBrains Mono',monospace; }
+  .sets-input{ width:48px; text-align:center; background: var(--surface); border:1px solid var(--border-strong); border-radius:7px; color: var(--text); padding:8px 2px; min-height:40px; font-size:15px; font-family:var(--sans); font-variant-numeric:tabular-nums; }
   .icon-btn{ flex:none; width:40px; height:40px; border-radius:8px; border:1px solid var(--border); background: var(--surface); color: var(--text-dim); font-size:14px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .icon-btn:hover{ color: var(--text); border-color: var(--text-faint); }
   .icon-btn.rm:hover{ color: var(--danger); border-color: var(--danger); }
-  .icon-btn.expand-btn{ font-family:'JetBrains Mono',monospace; font-size:16px; }
+  .icon-btn.expand-btn{ font-family:var(--sans); font-variant-numeric:tabular-nums; font-size:16px; }
   .icon-btn.ellipsis{ letter-spacing:1px; font-size:16px; }
   .timer-badge.running{ color: var(--item-color); border-color: var(--item-color); }
   .superset-badge{ color: var(--superset); border-color: var(--superset); }
   .set-rows{ margin-top:10px; padding-top:9px; border-top:1px dashed var(--border-soft); display:flex; flex-direction:column; gap:6px; }
   .set-row{ display:flex; align-items:center; gap:8px; }
-  .set-row .set-num{ font-size:12.5px; color: var(--text-faint); font-family:'JetBrains Mono',monospace; width:46px; flex:none; }
+  .set-row .set-num{ font-size:12.5px; color: var(--text-faint); font-family:var(--sans); font-variant-numeric:tabular-nums; width:46px; flex:none; }
   /* ---- Train modes: browsing and logging are different jobs, so on a phone
      they get different screens rather than one long scroll. Desktop shows the
      tray as a permanent column, where the switch would be pointless. ---- */
@@ -552,11 +587,11 @@
     border-radius:10px; padding:3px; margin-bottom:16px; }
   .mode-switch button{
     flex:1; background:none; border:none; border-radius:7px; padding:9px 6px; cursor:pointer;
-    font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.05em;
+    font-family:var(--sans); text-transform:uppercase; letter-spacing:.05em;
     font-size:12px; color: var(--text-dim); display:flex; align-items:center; justify-content:center; gap:6px;
   }
   .mode-switch button.on{ background: var(--surface-3); color: var(--text); }
-  .ms-count{ font-family:'JetBrains Mono',monospace; font-size:11px; background: var(--text);
+  .ms-count{ font-family:var(--sans); font-variant-numeric:tabular-nums; font-size:11px; background: var(--text);
     color: var(--bg); border-radius:999px; padding:1px 7px; letter-spacing:0; }
   .mode-switch button:not(.on) .ms-count{ background: var(--border); color: var(--text-dim); }
   .ms-count[data-empty="1"]{ display:none; }
@@ -581,14 +616,14 @@
     transition: width .25s ease; }
 
   /* ---- last time ---- */
-  .last-time{ font-size:12px; color: var(--text-faint); font-family:'JetBrains Mono',monospace;
+  .last-time{ font-size:12px; color: var(--text-faint); font-family:var(--sans); font-variant-numeric:tabular-nums;
     margin-top:5px; line-height:1.35; }
   .last-time b{ color: var(--text-dim); font-weight:500; }
 
   .set-head{ display:flex; align-items:center; gap:8px; padding-bottom:1px; }
   .set-head .col-lbl{ flex:1; min-width:0; text-align:center; font-size:8.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); }
   .set-head .col-spacer{ width:20px; flex:none; }
-  .set-row .set-input{ flex:1; min-width:0; background: var(--surface); border:1px solid var(--border-strong); border-radius:7px; color: var(--text); padding:10px 8px; font-size:15px; min-height:44px; font-family:'JetBrains Mono',monospace; text-align:center; }
+  .set-row .set-input{ flex:1; min-width:0; background: var(--surface); border:1px solid var(--border-strong); border-radius:7px; color: var(--text); padding:10px 8px; font-size:15px; min-height:44px; font-family:var(--sans); font-variant-numeric:tabular-nums; text-align:center; }
   .set-row .set-input::placeholder{ color: var(--text-faint); }
   .set-row .set-input:focus{ outline:none; border-color: var(--item-color, var(--text-faint)); }
   .set-row.done .set-num{ color: var(--item-color); }
@@ -625,7 +660,7 @@
   .menu-superset-item input{ accent-color: var(--superset); }
   .menu-empty{ font-size:11.5px; color: var(--text-faint); }
   .timer-chips{ display:flex; flex-wrap:wrap; gap:5px; }
-  .timer-chip{ border:1px solid var(--border); background: var(--surface); color: var(--text-dim); border-radius:999px; padding:4px 9px; font-size:11px; cursor:pointer; font-family:'JetBrains Mono',monospace; }
+  .timer-chip{ border:1px solid var(--border); background: var(--surface); color: var(--text-dim); border-radius:999px; padding:4px 9px; font-size:11px; cursor:pointer; font-family:var(--sans); font-variant-numeric:tabular-nums; }
   .timer-chip.active{ background: var(--item-color); border-color: var(--item-color); color: var(--item-ink, var(--bg)); }
   .timer-custom{ display:flex; gap:6px; margin-top:8px; }
   .timer-custom input{ flex:1; min-width:0; background: var(--surface); border:1px solid var(--border); border-radius:6px; color: var(--text); padding:6px 7px; font-size:12px; }
@@ -637,20 +672,22 @@
      the session away. They are now different sizes, different colours, separated
      by a rule, and Clear asks first. */
   .tray-actions{ border-top:1px solid var(--border-soft); padding-top:14px; display:flex; flex-direction:column; gap:0; }
-  .tray-actions button{ border-radius:9px; cursor:pointer; border:1px solid var(--border);
-    background: var(--surface-2); color: var(--text-dim); font-family:inherit; }
+  .tray-actions button{ border-radius:999px; cursor:pointer; border:1px solid var(--border-strong);
+    background:transparent; color: var(--text-dim); font-family:inherit; }
   .tray-actions button:hover{ color: var(--text); border-color: var(--text-faint); }
   /* The one button pressed every session: full width, 52px, and the only filled one. */
   .tray-actions .log{
     background: var(--text); color: var(--bg); border-color: var(--text);
-    font-weight:600; font-size:15.5px; min-height:52px; padding:13px 14px;
+    font-weight:500; font-size:16px; min-height:54px; padding:14px; border-radius:999px;
   }
   .tray-actions .log:hover{ color: var(--bg); opacity:.88; }
   .tray-actions .secondary{
     display:flex; gap:10px; margin-top:16px; padding-top:14px;
     border-top:1px solid var(--border-soft);
   }
-  .tray-actions .secondary button{ flex:1; min-height:44px; padding:10px 8px; font-size:13.5px; }
+  .tray-actions .secondary button{ flex:1; min-height:44px; padding:11px 8px; font-size:13.5px;
+    border-color:transparent; }
+  .tray-actions .secondary button:hover{ border-color: var(--border-strong); }
   .tray-actions .clear{ color: var(--danger); border-color: color-mix(in oklab, var(--danger) 42%, transparent); }
   .tray-actions .clear:hover{ color: var(--danger); border-color: var(--danger);
     background: color-mix(in oklab, var(--danger) 12%, var(--surface-2)); }
@@ -672,7 +709,7 @@
   .cal-cell:hover{ border-color: var(--text-faint); }
   .cal-cell.blank{ background:transparent; border-color:transparent; cursor:default; }
   .cal-cell.blank:hover{ border-color:transparent; }
-  .cal-cell .dnum{ font-size:12px; font-family:'JetBrains Mono',monospace; color: var(--text-dim); }
+  .cal-cell .dnum{ font-size:12px; font-family:var(--sans); font-variant-numeric:tabular-nums; color: var(--text-dim); }
   .cal-cell.today{ border-color: var(--text-dim); }
   .cal-cell.today .dnum{ color: var(--text); font-weight:600; }
   .cal-cell.selected{ box-shadow: 0 0 0 2px var(--text) inset; }
@@ -701,10 +738,17 @@
   .day-detail{ margin-top:18px; }
   .day-detail h3{ font-size:14px; margin-bottom:3px; }
   .day-detail .dsub{ font-size:12px; color: var(--text-dim); margin-bottom:12px; }
-  .sess-ex{ border-left:3px solid var(--item-color); background: var(--surface-2); border:1px solid var(--border-soft); border-left-width:3px; border-radius:8px; padding:9px 11px; margin-bottom:7px; }
+  .sess-ex{ background:transparent; border:0; border-bottom:1px solid var(--border);
+    border-radius:0; padding:13px 2px; margin-bottom:0; }
+  .sess-ex .nm{ position:relative; padding-left:16px; }
+  .sess-ex .nm::before{
+    content:""; position:absolute; left:0; top:.52em;
+    width:8px; height:8px; border-radius:50%;
+    background: var(--item-color, var(--text-faint));
+  }
   .sess-ex .top{ display:flex; justify-content:space-between; gap:10px; align-items:baseline; }
   .sess-ex .nm{ font-size:13px; font-weight:500; }
-  .sess-ex .setline{ font-size:11.5px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; margin-top:4px; }
+  .sess-ex .setline{ font-size:11.5px; color: var(--text-dim); font-family:var(--sans); font-variant-numeric:tabular-nums; margin-top:4px; }
 
   /* ---- Editing a logged day ----
      A logged session is not a receipt. "Log session" is one tap next to the set
@@ -717,11 +761,10 @@
   .sess-ex .nm-wrap{ display:flex; align-items:center; gap:8px; min-width:0; flex:1 1 auto; }
   .sess-ex .nm{ min-width:0; overflow-wrap:anywhere; }
   .sess-ex .top-right{ display:flex; align-items:center; gap:6px; flex:none; }
-  .sess-ex.editing{ border-bottom-left-radius:0; border-bottom-right-radius:0; margin-bottom:0; }
+  .sess-ex.editing{ border-bottom-color:transparent; }
   .sess-editor{
     background: var(--surface); border:1px solid var(--border);
-    border-left:3px solid var(--item-color); border-top:none;
-    border-radius:0 0 8px 8px; padding:12px 11px 11px; margin-bottom:7px;
+    border-radius:14px; padding:14px 13px 13px; margin-bottom:12px;
   }
   .sess-editor .ed-sub{ font-size:11px; color: var(--text-faint); margin:0 0 10px;
     text-transform:uppercase; letter-spacing:.05em; }
@@ -732,7 +775,7 @@
   .sess-set-head{ font-size:10px; text-transform:uppercase; letter-spacing:.05em;
     color: var(--text-faint); margin-bottom:5px; }
   .sess-set-row{ margin-bottom:6px; }
-  .sess-set-row .snum{ font-size:11px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; }
+  .sess-set-row .snum{ font-size:11px; color: var(--text-dim); font-family:var(--sans); font-variant-numeric:tabular-nums; }
   .sess-set-row input[type="text"]{
     background: var(--surface-2); border:1px solid var(--border-strong); border-radius:7px;
     color: var(--text); padding:7px 8px; font-size:13px; font-family:inherit; width:100%;
@@ -763,7 +806,7 @@
   .iv-head{ font-size:10px; text-transform:uppercase; letter-spacing:.05em;
     color: var(--text-faint); margin-bottom:5px; }
   .iv-row{ margin-bottom:6px; }
-  .iv-row .snum{ font-size:11px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; }
+  .iv-row .snum{ font-size:11px; color: var(--text-dim); font-family:var(--sans); font-variant-numeric:tabular-nums; }
   .iv-row input[type="text"]{
     background: var(--surface-2); border:1px solid var(--border-strong); border-radius:7px;
     color: var(--text); padding:7px 8px; font-size:13px; font-family:inherit; width:100%; min-width:0;
@@ -828,13 +871,14 @@
 
   /* ================= Records / PRs ================= */
   .pr-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(330px,1fr)); gap:14px; }
-  .pr-card{ background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); border-top:3px solid var(--lift-color); padding:15px 15px 13px; position:relative; }
+  .pr-card{ background: var(--surface); border:1px solid var(--border); border-radius:16px;
+    padding:18px 17px 15px; position:relative; }
   .pr-card .pr-head{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
   .pr-card h3{ font-size:14.5px; color: var(--lift-text, var(--lift-color)); }
   .pr-card .eqline{ font-size:11px; color: var(--text-faint); margin-top:3px; }
   .pr-card .pr-caption{ margin-top:14px; }
   .pr-hero{ display:flex; align-items:baseline; gap:12px; margin:14px 0 4px; flex-wrap:wrap; }
-  .pr-hero .big{ font-family:'Oswald',sans-serif; font-size:34px; line-height:1; font-variant-numeric: tabular-nums; }
+  .pr-hero .big{ font-family:var(--serif); font-weight:300; font-size:40px; letter-spacing:-.02em; line-height:1; font-variant-numeric: tabular-nums; }
   .pr-hero .unit{ font-size:14px; color: var(--text-dim); margin-left:-7px; }
   .pr-hero .best{ font-size:11.5px; color: var(--text-dim); }
   .pr-caption{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); }
@@ -846,25 +890,25 @@
     padding:5px 8px; font-size:11px; white-space:nowrap; box-shadow: var(--shadow); z-index:5;
   }
   .pr-tip.show{ opacity:1; }
-  .pr-tip .tv{ font-family:'JetBrains Mono',monospace; }
+  .pr-tip .tv{ font-family:var(--sans); font-variant-numeric:tabular-nums; }
   .pr-nodata{ font-size:12px; color: var(--text-faint); padding:16px 0 12px; }
   .pr-form{ display:flex; gap:6px; align-items:flex-end; margin-top:10px; padding-top:12px; border-top:1px solid var(--border-soft); flex-wrap:wrap; }
   .pr-form label{ display:flex; flex-direction:column; gap:3px; font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color: var(--text-faint); white-space:nowrap; flex:1 1 58px; min-width:58px; }
   .pr-form label.weight-field{ flex:1 1 76px; min-width:76px; }
   .pr-form label.date-field{ flex:1 1 128px; min-width:128px; }
-  .pr-form input{ width:100%; background: var(--surface-2); border:1px solid var(--border); border-radius:6px; color: var(--text); padding:7px 8px; font-size:12.5px; font-family:'JetBrains Mono',monospace; }
+  .pr-form input{ width:100%; background: var(--surface-2); border:1px solid var(--border); border-radius:6px; color: var(--text); padding:7px 8px; font-size:12.5px; font-family:var(--sans); font-variant-numeric:tabular-nums; }
   .pr-form .add{ flex:none; border:1px solid var(--border); background: var(--lift-color); color: var(--lift-ink, var(--bg)); border-radius:6px; padding:8px 14px; font-size:12px; font-weight:600; cursor:pointer; border-color: var(--lift-color); }
   .pr-form .add:hover{ opacity:.88; }
   .pr-hist{ margin-top:11px; display:flex; flex-direction:column; gap:4px; }
   .pr-hist .h-row{ display:flex; align-items:center; gap:8px; font-size:11.5px; color: var(--text-dim); }
-  .pr-hist .h-row .d{ font-family:'JetBrains Mono',monospace; width:76px; flex:none; color: var(--text-faint); }
-  .pr-hist .h-row .w{ font-family:'JetBrains Mono',monospace; flex:1; color: var(--text); }
+  .pr-hist .h-row .d{ font-family:var(--sans); font-variant-numeric:tabular-nums; width:76px; flex:none; color: var(--text-faint); }
+  .pr-hist .h-row .w{ font-family:var(--sans); font-variant-numeric:tabular-nums; flex:1; color: var(--text); }
   .pr-hist .h-row .pr-flag{ color: var(--lift-text, var(--lift-color)); font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
   .pr-hist .h-row .del{ background:none; border:none; color: var(--text-faint); cursor:pointer; font-size:13px; padding:0 2px; }
   .pr-hist .h-row .del:hover{ color: var(--danger); }
   .pr-table{ width:100%; border-collapse: collapse; font-size:12px; margin-top:8px; }
   .pr-table th{ text-align:left; font-weight:500; font-size:10px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); padding:5px 8px 5px 0; border-bottom:1px solid var(--border-soft); }
-  .pr-table td{ padding:5px 8px 5px 0; border-bottom:1px solid var(--border-soft); font-family:'JetBrains Mono',monospace; color: var(--text-dim); }
+  .pr-table td{ padding:5px 8px 5px 0; border-bottom:1px solid var(--border-soft); font-family:var(--sans); font-variant-numeric:tabular-nums; color: var(--text-dim); }
   details.table-toggle summary{ cursor:pointer; font-size:11.5px; color: var(--text-faint); margin-top:10px; }
   details.table-toggle summary:hover{ color: var(--text-dim); }
 
@@ -894,7 +938,7 @@
     margin-top:14px; font-size:11.5px; color: var(--text-dim); line-height:1.5;
     background: var(--surface-2); border:1px solid var(--border-soft); border-radius:8px; padding:10px 12px;
   }
-  .section-title{ font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.05em; font-size:12px; color: var(--text-faint); margin:22px 0 10px; }
+  .section-title{ font-family:var(--sans); text-transform:uppercase; letter-spacing:.05em; font-size:12px; color: var(--text-faint); margin:22px 0 10px; }
 
   /* ================= Custom exercise ================= */
   .new-ex-panel{ margin-bottom:20px; }
@@ -923,14 +967,13 @@
   .note-badge{ cursor:help; }
 
   .card-shell{ display:flex; flex-direction:column; }
-  .card-shell .card{ border-bottom-left-radius:0; border-bottom-right-radius:0; border-bottom-color:transparent; }
+  .card-shell .card{ border-bottom-color:transparent; }
   .ex-editor{
-    background: var(--surface-2); border:1px solid var(--border);
-    border-top:none; border-radius:0 0 var(--radius) var(--radius);
-    padding:14px 13px 13px;
+    background: var(--surface); border:1px solid var(--border);
+    border-radius:14px; padding:15px 14px 14px; margin-bottom:12px;
   }
   .ed-head{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px; }
-  .ed-head h4{ font-size:13px; font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.04em; }
+  .ed-head h4{ font-size:13px; font-family:var(--sans); text-transform:uppercase; letter-spacing:.04em; }
   .ed-close{
     flex:none; border:1px solid var(--border-strong); background: var(--surface);
     color: var(--text-dim); border-radius:7px; padding:5px 12px; font-size:11.5px;
@@ -1001,8 +1044,9 @@
      does not exist on a phone — so on 92 cards the only route to notes, defaults
      and archive was invisible. */
   .ex-menu-btn{
-    width:32px; height:32px;
-    border-color: var(--border); background: var(--surface-2);
+    /* 32px was below the 40px floor the rest of the app holds to. */
+    width:40px; height:40px;
+    border-color: var(--border); background:transparent;
   }
   .ex-menu-btn:hover{ background: var(--surface-3); }
 
@@ -1045,7 +1089,7 @@
   .split-tile.make-new .plus{ font-size:22px; line-height:1; color: var(--text-dim); }
   .split-tile.make-new:hover .plus{ color: var(--text); }
   .day-name-input{
-    font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.03em; font-size:13.5px;
+    font-family:var(--sans); text-transform:uppercase; letter-spacing:.03em; font-size:13.5px;
     color: var(--day-color); background:transparent; border:1px solid transparent; border-radius:5px;
     padding:2px 5px; margin:-2px -5px; width:100%;
   }
@@ -1081,7 +1125,7 @@
   .split-tile:hover{ transform: translateY(-2px); border-color: var(--text-faint); }
   .split-tile.active{ border-color: var(--text); box-shadow: 0 0 0 1px var(--text) inset; }
   .split-tile .st-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
-  .split-tile .st-name{ font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.03em; font-size:14.5px; line-height:1.15; }
+  .split-tile .st-name{ font-family:var(--sans); text-transform:uppercase; letter-spacing:.03em; font-size:14.5px; line-height:1.15; }
   .split-tile .st-active{ font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color: var(--bg); background: var(--text); border-radius:4px; padding:2px 6px; flex:none; }
   .split-tile .st-edited{ font-size:9.5px; text-transform:uppercase; letter-spacing:.06em; color: var(--text-faint); border:1px solid var(--border); border-radius:4px; padding:2px 6px; flex:none; }
   .split-tile .st-facts{ display:flex; gap:6px; flex-wrap:wrap; }
@@ -1100,11 +1144,11 @@
     border-radius: var(--radius); padding:13px 14px 12px; display:flex; flex-direction:column;
   }
   .day-card .dc-head{ margin-bottom:10px; }
-  .day-card h4{ font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.03em; font-size:13.5px; margin:0; color: var(--day-color); }
+  .day-card h4{ font-family:var(--sans); text-transform:uppercase; letter-spacing:.03em; font-size:13.5px; margin:0; color: var(--day-color); }
   .day-card .dc-note{ font-size:11.5px; color: var(--text-dim); margin-top:4px; line-height:1.4; }
   .day-ex-list{ display:flex; flex-direction:column; gap:5px; flex:1; }
   .day-ex{ display:flex; align-items:center; gap:7px; background: var(--surface-2); border:1px solid var(--border-soft); border-radius:7px; padding:7px 8px; }
-  .day-ex .dx-num{ font-family:'JetBrains Mono',monospace; font-size:10.5px; color: var(--text-faint); width:15px; flex:none; }
+  .day-ex .dx-num{ font-family:var(--sans); font-variant-numeric:tabular-nums; font-size:10.5px; color: var(--text-faint); width:15px; flex:none; }
   .day-ex .dx-body{ flex:1; min-width:0; }
   .day-ex .dx-name{ font-size:12.5px; line-height:1.3; }
   .day-ex .dx-eq{ font-size:10px; color: var(--text-faint); text-transform:uppercase; letter-spacing:.04em; margin-top:2px; }
@@ -1148,7 +1192,7 @@
     width:100%; min-height:180px; max-height:320px; resize:vertical;
     background: var(--surface-2); border:1px solid var(--border); border-radius:9px;
     color: var(--text); padding:12px 13px; font-size:12px; line-height:1.55;
-    font-family:'JetBrains Mono', ui-monospace, monospace; white-space:pre; overflow:auto;
+    font-family:var(--sans); font-variant-numeric:tabular-nums; white-space:pre; overflow:auto;
   }
   .share-actions{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
   .share-hint{ font-size:11.5px; color: var(--text-faint); margin-top:10px; line-height:1.5; }
@@ -1157,9 +1201,9 @@
     width:100%; min-height:100px; resize:vertical;
     background: var(--surface-2); border:1px solid var(--border); border-radius:9px;
     color: var(--text); padding:11px 12px; font-size:12px; line-height:1.5;
-    font-family:'JetBrains Mono', ui-monospace, monospace;
+    font-family:var(--sans); font-variant-numeric:tabular-nums;
   }
-  .import-area::placeholder{ color: var(--text-faint); font-family:'Work Sans',sans-serif; }
+  .import-area::placeholder{ color: var(--text-faint); font-family:var(--sans); }
   .file-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; }
   .file-label{
     display:inline-flex; align-items:center; gap:7px; cursor:pointer;
@@ -1170,7 +1214,7 @@
   .file-label input{ display:none; }
 
   .import-result{ margin-top:14px; border:1px solid var(--border); border-radius:9px; background: var(--surface-2); padding:13px 14px; }
-  .import-result .rtitle{ font-family:'Oswald',sans-serif; text-transform:uppercase; letter-spacing:.03em; font-size:13.5px; }
+  .import-result .rtitle{ font-family:var(--sans); text-transform:uppercase; letter-spacing:.03em; font-size:13.5px; }
   .import-result .rsub{ font-size:12px; color: var(--text-dim); margin-top:4px; }
   .import-result.bad{ border-color: var(--danger); }
   .import-result.bad .rtitle{ color: var(--danger); }
@@ -1180,10 +1224,10 @@
     border:1px solid var(--border-soft); border-left:3px solid var(--day-color, var(--border));
     border-radius:7px; background: var(--surface);
   }
-  .import-day .idx{ font-family:'JetBrains Mono',monospace; font-size:11px; color: var(--text-faint); width:26px; flex:none; }
+  .import-day .idx{ font-family:var(--sans); font-variant-numeric:tabular-nums; font-size:11px; color: var(--text-faint); width:26px; flex:none; }
   .import-day .dinfo{ flex:1; min-width:0; }
   .import-day .dname{ font-size:12.5px; }
-  .import-day .dmeta{ font-size:11px; color: var(--text-faint); margin-top:2px; font-family:'JetBrains Mono',monospace; }
+  .import-day .dmeta{ font-size:11px; color: var(--text-faint); margin-top:2px; font-family:var(--sans); font-variant-numeric:tabular-nums; }
   .import-day button{ flex:none; border:1px solid var(--border); background: var(--surface-2); color: var(--text-dim); border-radius:6px; padding:6px 11px; font-size:11.5px; cursor:pointer; }
   .import-day button:hover{ color: var(--text); border-color: var(--text-faint); }
 
@@ -1245,7 +1289,7 @@
   .cardio-panel h3{ font-size:14px; }
   .cardio-panel .lede{ font-size:12px; color: var(--text-dim); margin:4px 0 0; max-width:58ch; }
   .cardio-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:13px; flex-wrap:wrap; }
-  .cardio-total{ font-family:'Oswald',sans-serif; font-size:22px; font-variant-numeric: tabular-nums; color: var(--cardio-ink); flex:none; }
+  .cardio-total{ font-family:var(--sans); font-size:22px; font-variant-numeric: tabular-nums; color: var(--cardio-ink); flex:none; }
 
   .machine-row{ display:flex; gap:8px; flex-wrap:wrap; }
   .machine-btn{
@@ -1278,12 +1322,12 @@
     border-left:3px solid var(--cardio); border-radius:8px; padding:8px 9px;
   }
   .interval-row .idx{
-    font-family:'JetBrains Mono',monospace; font-size:11px; color: var(--text-faint); text-align:center;
+    font-family:var(--sans); font-variant-numeric:tabular-nums; font-size:11px; color: var(--text-faint); text-align:center;
   }
   .interval-row input{
     width:100%; min-width:0; background: var(--surface); border:1px solid var(--border-strong);
     border-radius:6px; color: var(--text); padding:7px 8px; font-size:13px;
-    font-family:'JetBrains Mono',monospace; text-align:center;
+    font-family:var(--sans); font-variant-numeric:tabular-nums; text-align:center;
   }
   .dur-cell{ display:flex; align-items:center; gap:3px; }
   .dur-cell input{ text-align:center; padding:7px 4px; }
@@ -1313,7 +1357,7 @@
   }
   .preset .pinfo{ flex:1; min-width:0; }
   .preset .pname{ font-size:13px; font-weight:500; }
-  .preset .pmeta{ font-size:11px; color: var(--text-faint); margin-top:2px; font-family:'JetBrains Mono',monospace; }
+  .preset .pmeta{ font-size:11px; color: var(--text-faint); margin-top:2px; font-family:var(--sans); font-variant-numeric:tabular-nums; }
   .preset .pbtns{ display:flex; gap:6px; flex:none; }
   .preset .pbtns button{
     border:1px solid var(--border-strong); background: var(--surface); color: var(--text-dim);
@@ -1327,11 +1371,11 @@
   /* ---- the runner ---- */
   .cardio-run{ border-left:3px solid var(--cardio); margin-bottom:18px; }
   .run-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
-  .run-plan{ font-family:'Oswald',sans-serif; font-size:16px; text-transform:uppercase; letter-spacing:.04em; }
+  .run-plan{ font-family:var(--sans); font-size:16px; text-transform:uppercase; letter-spacing:.04em; }
   .run-step{ font-size:11.5px; color: var(--text-dim); margin-top:3px; }
   .run-clock{ text-align:center; padding:18px 0 6px; }
   .run-remaining{
-    font-family:'Oswald',sans-serif; font-size:64px; line-height:1;
+    font-family:var(--sans); font-size:64px; line-height:1;
     font-variant-numeric: tabular-nums; letter-spacing:.01em;
   }
   .run-settings{
@@ -1346,7 +1390,7 @@
   .run-bar-fill{ height:100%; width:0%; background: var(--cardio); border-radius:999px; transition: width .25s linear; }
   .run-totals{
     display:flex; justify-content:space-between; font-size:11.5px; color: var(--text-faint);
-    font-family:'JetBrains Mono',monospace; margin-top:7px;
+    font-family:var(--sans); font-variant-numeric:tabular-nums; margin-top:7px;
   }
   .run-next{
     margin-top:14px; padding:10px 12px; background: var(--surface-2);
@@ -1366,7 +1410,7 @@
   .ver-row{ display:flex; gap:26px; flex-wrap:wrap; margin:14px 0 15px; }
   .ver-now{ display:flex; flex-direction:column; gap:3px; }
   .ver-k{ font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color: var(--text-faint); }
-  .ver-v{ font-family:'JetBrains Mono',monospace; font-size:13px; }
+  .ver-v{ font-family:var(--sans); font-variant-numeric:tabular-nums; font-size:13px; }
   .ver-status{ font-size:12.5px; color: var(--text-dim); margin:11px 0 0; min-height:1.2em; }
   .ver-status.good{ color: var(--abs-ink); }
   .ver-status.bad{ color: var(--danger); }

@@ -405,6 +405,42 @@ Things that look like details and are not:
     app and the subject of invariant 34. The menu deliberately stays open on the
     moved item so a second tap moves it again.
 
+38. **Nothing is in a box that does not need to be.** Every exercise used to be a
+    filled, bordered card with a 3px coloured left edge; nine stacked read as nine
+    competing objects. They are rows on one sheet now, divided by hairlines —
+    `.tray-item`, `.card` and `.sess-ex` all lost their fill, border and radius and
+    gained a `border-bottom`. This is the single change that makes the app feel
+    calm, and the one to defend if a future edit wants to put the boxes back.
+
+39. **The category colour is a dot, drawn by a pseudo-element.** The five hex
+    values are untouched — invariant 21 still governs them — but they went from
+    3px borders and tinted surfaces to an 8px disc on the name, roughly a tenth of
+    the area. The dot is `::before` on `.ex-name` / `.card .name` / `.sess-ex .nm`
+    precisely so no markup or script had to change for it, and it is absolutely
+    positioned with `padding-left` on the name rather than sitting inline: inline
+    it stole 17px from an already-tight column and pushed every long exercise name
+    onto a second line.
+
+40. **Warm greys, not blue-grey.** The old slate was cool (`#131519`); the stack is
+    now warm paper `#f7f5f2` through warm charcoal `#14120f`. Same token names,
+    same structure, same three-state theme machinery — only the values moved, which
+    is why the swap was safe. Every text token still clears 4.5:1 on every surface
+    it lands on, verified in-browser rather than on paper.
+
+41. **Two typefaces, not three.** Oswald and JetBrains Mono are gone. Inter with
+    `font-variant-numeric: tabular-nums` lines a set column up exactly as a
+    monospace did, and a serif (Source Serif 4) appears only where a number is the
+    point — the stat tiles and the PR hero. Headings are sentence case: a condensed
+    uppercase heading shouts, and in this system size and whitespace carry the
+    hierarchy. **Name concrete families before the generics in the fallback stack** —
+    `ui-sans-serif` resolves to a *serif* on some Linux fontconfig setups, which is
+    how a sans-serif rule renders with serifs.
+
+42. **One filled button in view at a time.** `.log` is the only solid control on
+    the Train screen; everything else is an outline or text pill at `999px`. This
+    is also the furthest Clear has ever been from Log, which is invariant 34's
+    problem solved a second way.
+
 ### The share format
 
 ```
