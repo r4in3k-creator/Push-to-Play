@@ -19,7 +19,7 @@
 <!-- Shown in Settings so you can tell at a glance which build you are on, and
      what a device that is behaving oddly is actually running. Keep it in step
      with VERSION in sw.js. -->
-<meta name="ptp-version" content="ptp-v17">
+<meta name="ptp-version" content="ptp-v21">
 <meta name="description" content="Push / Pull / Legs / Abs workout tracker — split templates, set-by-set logging, training calendar and personal records.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -394,7 +394,7 @@
     font-family: inherit; font-size: 12px; cursor: pointer; padding: 0 0 10px;
   }
   .tray-back:hover{ color: var(--text); }
-  @media (max-width: 920px){ .tray-back{ display: block; } }
+  @media (max-width: 920px){ .tray-back{ display: inline-flex; } }
   .view{ display:none; }
   .view.active{ display:block; }
   .view-intro{ margin-bottom:18px; }
@@ -608,14 +608,27 @@
   .sess-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
   .sess-head h2{ font-size:15px; }
   .sess-head .sub{ font-size:11.5px; color: var(--text-dim); margin:4px 0 0; }
-  .tray-back{ flex:none; background: var(--surface-2); border:1px solid var(--border); color: var(--text-dim);
-    border-radius:8px; padding:6px 11px; font-size:12px; cursor:pointer; font-family:inherit; }
+  /* Same height as the ⋯ beside it and a full thumb wide — it is how you get
+     back to the directory mid-workout, so it should never need aiming. */
+  .tray-back{ flex:none; align-items:center; justify-content:center; gap:6px;
+    min-height:44px; min-width:96px; padding:0 18px; border-radius:999px;
+    background: var(--surface-2); border:1px solid var(--border-strong); color: var(--text);
+    font: 500 15px/1 var(--sans); cursor:pointer; }
   .tray-back:hover{ color: var(--text); border-color: var(--text-faint); }
   .sess-bar{ height:4px; border-radius:2px; background: var(--surface-3); margin-top:11px; overflow:hidden; }
   .sess-bar i{ display:block; height:100%; width:0; background: var(--text); border-radius:2px;
-    transition: width .25s ease; }
+    transition: width .45s var(--ease); }
 
   /* ---- last time ---- */
+  /* The suggestion lives in the badge row that already exists — no new row.
+     Small to look at, 44px to hit: the target is pushed out past its edges. */
+  .next-pill{
+    display:inline-flex; align-items:center; gap:4px; cursor:pointer; position:relative;
+    color: var(--text); border-color: var(--border-strong); background:transparent;
+    text-transform:none; letter-spacing:0; font-family:var(--sans); font-variant-numeric:tabular-nums;
+  }
+  .next-pill::after{ content:""; position:absolute; inset:-11px -5px; }
+  .next-pill:hover{ background: var(--surface-3); }
   .last-time{ font-size:12px; color: var(--text-faint); font-family:var(--sans); font-variant-numeric:tabular-nums;
     margin-top:5px; line-height:1.35; }
   .last-time b{ color: var(--text-dim); font-weight:500; }
@@ -681,16 +694,13 @@
     font-weight:500; font-size:16px; min-height:54px; padding:14px; border-radius:999px;
   }
   .tray-actions .log:hover{ color: var(--bg); opacity:.88; }
-  .tray-actions .secondary{
-    display:flex; gap:10px; margin-top:16px; padding-top:14px;
-    border-top:1px solid var(--border-soft);
-  }
-  .tray-actions .secondary button{ flex:1; min-height:44px; padding:11px 8px; font-size:13.5px;
-    border-color:transparent; }
-  .tray-actions .secondary button:hover{ border-color: var(--border-strong); }
-  .tray-actions .clear{ color: var(--danger); border-color: color-mix(in oklab, var(--danger) 42%, transparent); }
-  .tray-actions .clear:hover{ color: var(--danger); border-color: var(--danger);
-    background: color-mix(in oklab, var(--danger) 12%, var(--surface-2)); }
+  .sess-tools{ flex:none; display:flex; align-items:flex-start; gap:8px; }
+  .sess-more-wrap{ position:relative; }
+  .sess-more{ width:44px; height:44px; border-radius:999px; }
+  .sess-more[aria-expanded="true"]{ color: var(--text); border-color: var(--text-faint); background: var(--surface-3); }
+  .sess-menu{ width:200px; top: calc(100% + 6px); }
+  .sess-menu button{ min-height:44px; font-size:14px; color: var(--text); font-family:inherit; }
+  .sess-menu button[disabled]{ opacity:.4; cursor:default; }
 
   /* ================= Calendar ================= */
   .cal-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
@@ -1272,14 +1282,176 @@
     outline-offset: 2px;
   }
 
+  /* ================= Motion =================
+     One rule decides everything here: ONLY WHAT CHANGED MOVES. The tray, the
+     directory and the calendar rebuild their markup on every interaction, so an
+     animation written on a class that is always present would replay across the
+     whole list each time a set is ticked. Entrances are therefore keyed off
+     one-shot flags the script sets for the single thing that just appeared
+     (see `fx` in the script) and cleared the moment it has rendered.
+
+     Nothing runs longer than about a quarter of a second, nothing delays input,
+     and the reduced-motion block at the end turns all of it off. */
+  :root{ --ease: cubic-bezier(.2,.7,.2,1); --t-fast:.13s; --t:.22s; }
+
+  @keyframes viewIn{ from{ opacity:0; transform: translateY(7px); } }
+  @keyframes rowIn{  from{ opacity:0; transform: translateY(9px); } }
+  @keyframes unfold{ from{ opacity:0; transform: translateY(-5px); } }
+  @keyframes pop{ 0%{ transform: scale(.72); } 60%{ transform: scale(1.16); } 100%{ transform: scale(1); } }
+  @keyframes breathe{ 50%{ opacity:.45; } }
+
+  /* display:none -> block restarts this by itself, so switching tabs glides in
+     and re-rendering the tab you are already on does not. */
+  .view.active{ animation: viewIn var(--t) var(--ease); }
+
+  .tray-item.enter{ animation: rowIn .26s var(--ease) backwards; }
+  .set-rows.enter, .menu-popover.enter, .ex-editor, .sess-editor, .move-panel{
+    animation: unfold .2s var(--ease); }
+  .checkmark.pop, .add-btn.pop{ animation: pop .3s var(--ease); }
+  /* A running rest timer is the one thing on screen that is live. */
+  .timer-badge.running .tico{ animation: breathe 1.2s ease-in-out infinite; }
+
+  /* Press feedback: a phone has no hover, so this is the only confirmation a
+     tap registered before the screen redraws. Named controls rather than every
+     button, because a few (the floating pills, the toast) already own their
+     transform. */
+  .btn, .add-btn, .icon-btn, .tile, .split-btn, .sg-chip, .timer-chip, .next-pill,
+  .tray-actions button, .mode-switch button, .menu-order button, .cal-cell,
+  .viewtab, .ex-menu-btn, .machine-btn{
+    transition: transform var(--t-fast) var(--ease), background-color var(--t-fast) ease,
+                border-color var(--t-fast) ease, color var(--t-fast) ease, opacity var(--t-fast) ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active, .add-btn:active, .icon-btn:active, .tile:active, .split-btn:active,
+  .sg-chip:active, .timer-chip:active, .next-pill:active, .tray-actions button:active,
+  .mode-switch button:active, .menu-order button:active:not(:disabled), .ex-menu-btn:active,
+  .machine-btn:active{ transform: scale(.96); }
+  .cal-cell:active{ transform: scale(.93); }
+  .check-wrap .checkmark{ transition: background-color var(--t-fast) ease, border-color var(--t-fast) ease; }
+  .set-row .set-input, .search, .sets-input{ transition: border-color var(--t-fast) ease, box-shadow var(--t-fast) ease; }
+  .set-row .set-input:focus, .search:focus, .sets-input:focus{
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--text) 12%, transparent); }
+
+  /* Frosted bars: content scrolls under the header and the tab bar instead of
+     being cut off by them. Falls back to the solid token where blur is missing. */
+  @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))){
+    /* The blur sits on a pseudo-element, never on <header> itself. A
+       backdrop-filter makes its element the containing block for fixed-position
+       descendants, and the phone's bottom tab bar is a fixed descendant of the
+       header — put the filter on the header and the tab bar leaves the bottom of
+       the screen and lands on top of the header. */
+    header{ background: transparent; }
+    header::before{
+      content:""; position:absolute; inset:0; z-index:-1;
+      background: color-mix(in srgb, var(--bg) 80%, transparent);
+      -webkit-backdrop-filter: saturate(1.5) blur(16px);
+      backdrop-filter: saturate(1.5) blur(16px);
+    }
+    @media (max-width: 920px){
+      .viewtabs{
+        background: color-mix(in srgb, var(--surface) 82%, transparent);
+        -webkit-backdrop-filter: saturate(1.5) blur(16px);
+        backdrop-filter: saturate(1.5) blur(16px);
+      }
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{
+      animation-duration: .001ms !important; animation-iteration-count: 1 !important;
+      animation-delay: 0s !important; transition-duration: .001ms !important;
+    }
+  }
+
+  /* ================= The exercise page =================
+     A full-screen sheet above everything but the toast. Big type, big targets,
+     nothing on it that is not about the exercise in hand. */
+  .focus{
+    position: fixed; inset:0; z-index:70; background: var(--bg); color: var(--text);
+    display:flex; flex-direction:column; overflow-y:auto; overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .focus[hidden]{ display:none; }
+  .focus.opening{ animation: focusIn .32s var(--ease) both; }
+  @keyframes focusIn{ from{ opacity:0; transform: translateX(28px); } }
+  @keyframes slideL{ from{ opacity:0; transform: translateX(22px); } }
+  @keyframes slideR{ from{ opacity:0; transform: translateX(-22px); } }
+  body.focus-open{ overflow:hidden; }
+  .focus-bar{
+    position: sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between;
+    padding: max(8px, var(--sa-t)) 12px 8px 4px; background: var(--bg);
+    border-bottom:1px solid var(--border-soft);
+  }
+  .focus-back{
+    display:inline-flex; align-items:center; gap:2px; min-height:44px; padding:0 12px 0 4px;
+    background:none; border:none; color: var(--text); font: 500 15px/1 var(--sans); cursor:pointer; border-radius:999px;
+  }
+  .focus-back:hover{ background: var(--surface-2); }
+  .focus-pos{ font: 13px var(--sans); font-variant-numeric: tabular-nums; color: var(--text-faint); }
+  .focus-body{ flex:1; width:100%; max-width:560px; margin:0 auto; padding:18px 18px 24px; box-sizing:border-box; }
+  .focus-body.slide-l{ animation: slideL .26s var(--ease) both; }
+  .focus-body.slide-r{ animation: slideR .26s var(--ease) both; }
+  .fx-eyebrow{ display:flex; align-items:center; gap:7px; font-size:12.5px; color: var(--text-dim); }
+  .fx-dot{ width:8px; height:8px; border-radius:50%; background: var(--item-color); flex:none; }
+  .fx-title{ font: 500 30px/1.12 var(--serif); letter-spacing:-.01em; margin:8px 0 10px; overflow-wrap:anywhere; }
+  .fx-meta{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; }
+  .fx-meta .last-time{ margin-top:0; }
+  .fx-meta .next-pill{ font-size:13px; padding:6px 12px; }
+  .fx-note{ margin-top:10px; }
+  .fx-rest{ margin:20px 0 6px; border-radius:16px; }
+  .fx-rest.idle{ font-size:13px; color: var(--text-faint); display:flex; align-items:center; gap:6px; margin:16px 0 4px; }
+  .fx-rest.on{
+    position:relative; overflow:hidden; display:grid; grid-template-columns: 1fr auto; align-items:end;
+    gap:2px 12px; padding:16px 16px 20px; background: var(--surface-2); border:1px solid var(--border);
+  }
+  .fx-rest-k{ grid-column:1; font-size:12px; color: var(--text-dim); text-transform:uppercase; letter-spacing:.06em; }
+  .fx-rest-v{ grid-column:1; font: 600 44px/1 var(--sans); font-variant-numeric: tabular-nums; letter-spacing:-.02em; }
+  .fx-rest-skip{ grid-column:2; grid-row:1 / span 2; align-self:center; min-height:44px; }
+  .fx-rest-bar{ position:absolute; left:0; right:0; bottom:0; height:4px; background: var(--surface-3); }
+  .fx-rest-bar i{ display:block; height:100%; background: var(--item-color); transform-origin:left center;
+    transition: transform .25s linear; }
+  .fx-rows{ margin-top:18px; gap:8px; }
+  .fx-rows .set-row .set-input{ min-height:52px; font-size:18px; }
+  .fx-rows .set-row .set-num{ font-size:13px; width:50px; }
+  .fx-rows .set-row.up-next .set-num{ color: var(--text); font-weight:600; }
+  .fx-setctl{ display:flex; gap:10px; margin-top:14px; }
+  .fx-setctl .btn{ flex:1; min-height:46px; display:inline-flex; align-items:center; gap:6px; justify-content:center; }
+  .fx-progress{ margin:16px 0 0; font-size:13px; color: var(--text-dim); display:flex; align-items:center; gap:6px;
+    font-variant-numeric: tabular-nums; }
+  .fx-progress.all{ color: var(--text); font-weight:500; }
+  .focus-foot{
+    position: sticky; bottom:0; background: var(--bg); border-top:1px solid var(--border-soft);
+    padding: 10px 14px max(10px, var(--sa-b));
+  }
+  .focus-foot-in{ display:flex; gap:10px; max-width:560px; margin:0 auto; }
+  .fx-prev{ flex:none; width:52px; min-height:52px; padding:0; display:inline-flex; align-items:center; justify-content:center; }
+  .fx-next{ flex:1; min-width:0; min-height:52px; display:flex; align-items:center; gap:8px; justify-content:space-between; }
+  .fx-next-k{ flex:none; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color: var(--text-faint); }
+  .fx-next-n{ flex:1; min-width:0; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:500; }
+  .focus-foot .btn:disabled{ opacity:.35; cursor:default; }
+  .fx-next.ready{ background: var(--text); color: var(--bg); border-color: var(--text); }
+  .fx-next.ready .fx-next-k{ color: color-mix(in srgb, var(--bg) 70%, transparent); }
+  .open-btn{ color: var(--text); }
+  .tray-item .head-left{ cursor:pointer; }
+  .row-progress{ font-size:12px; color: var(--text-dim); margin-top:4px; font-variant-numeric: tabular-nums; }
+  .row-progress.all{ color: var(--item-color); font-weight:500; }
+
+  /* A long option must never widen its grid column past the screen. */
+  .field{ min-width:0; }
+  .field select{ max-width:100%; min-width:0; }
+
   .toast{
     position: fixed; bottom:18px; left:50%; transform: translateX(-50%) translateY(8px);
     max-width: calc(100vw - 32px);
     background: var(--surface-2); border:1px solid var(--border); color: var(--text);
     padding:9px 16px; border-radius:999px; font-size:12.5px; box-shadow: var(--shadow);
-    opacity:0; pointer-events:none; transition: opacity .18s ease, transform .18s ease; z-index:80;
+    opacity:0; pointer-events:none; transition: opacity .2s ease, transform .26s var(--ease); z-index:80;
   }
   .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+  .toast.has-action{ pointer-events:auto; display:flex; align-items:center; gap:12px; padding:4px 6px 4px 16px; }
+  .toast-act{ background:none; border:none; color: var(--text); font: 600 13px var(--sans); cursor:pointer;
+    min-height:40px; padding:0 12px; border-radius:999px; text-decoration: underline; text-underline-offset:3px; }
+  .toast-act:hover{ background: var(--surface-3); }
 
 
   /* ================= Cardio =================
@@ -2038,12 +2210,14 @@
             <div class="field wide">
               <label for="stRestAlert">Rest timer alert</label>
               <select id="stRestAlert">
-                <option value="sound">Play a sound when the rest ends</option>
+                <option value="sound">Beep over my music</option>
+                <option value="background">Beep when locked (pauses music)</option>
                 <option value="off">Silent — just the toast</option>
               </select>
-              <span class="hint">The sound keeps playing with the app in the background or the
-                screen locked, because a silent track holds the audio open while a rest is
-                running. That stops the moment the last timer does.</span>
+              <span class="hint">"Over my music" leaves your music alone and plays a short tone on top
+                of it when the rest ends — it needs the app open to fire on time. The locked-phone
+                option keeps an audio track running through the rest so it can sound in the
+                background, and your phone treats that as the app taking over the audio.</span>
             </div>
             <div class="field wide">
               <label for="stRestNotify">Rest timer notification</label>
@@ -2192,7 +2366,20 @@
             <h2 id="sessTitle">Your Workout</h2>
             <p class="sub" id="sessSub">Nothing added yet</p>
           </div>
-          <button type="button" class="tray-back" id="trayBack">+ Add</button>
+          <div class="sess-tools">
+            <button type="button" class="tray-back" id="trayBack" aria-label="Add exercises"><span data-ico="plus" data-ico-size="18"></span>Add</button>
+            <!-- Clear lives up here, behind a menu, on purpose: at the foot of the
+                 list it sat a thumb's slip from Log and wiped workouts by accident. -->
+            <div class="sess-more-wrap">
+              <button type="button" class="icon-btn sess-more" id="sessMore" aria-haspopup="menu" aria-expanded="false"
+                      aria-controls="sessMenu" aria-label="Workout options" title="Workout options"><span data-ico="dots" data-ico-size="18"></span></button>
+              <div class="acct-menu sess-menu" id="sessMenu" role="menu">
+                <button type="button" role="menuitem" id="copyBtn"><span class="ico" data-ico="copy"></span>Copy as text</button>
+                <div class="sep"></div>
+                <button type="button" role="menuitem" class="destructive" id="clearBtn"><span class="ico" data-ico="trash"></span>Clear workout</button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="sess-bar" id="sessBar" hidden><i></i></div>
       </div>
@@ -2203,14 +2390,23 @@
       </div>
       <div class="tray-actions">
         <button type="button" class="log" id="logBtn">Log session to today</button>
-        <div class="secondary">
-          <button type="button" class="copy" id="copyBtn">Copy as text</button>
-          <button type="button" class="clear" id="clearBtn">Clear all</button>
-        </div>
       </div>
     </aside>
   </div>
 </main>
+
+<!-- One exercise at a time. Logging a set, ticking it, adding another — all of
+     that happens here, on a page that holds nothing but the exercise in hand, so
+     the rest of the workout cannot be mis-tapped mid-set. -->
+<section class="focus" id="focusPage" hidden role="dialog" aria-modal="true" aria-labelledby="focusTitle">
+  <div class="focus-bar">
+    <button type="button" class="focus-back" id="focusBack" aria-label="Back to your workout">
+      <span data-ico="chevron-left" data-ico-size="22"></span>Workout</button>
+    <span class="focus-pos" id="focusPos"></span>
+  </div>
+  <div class="focus-body" id="focusBody"></div>
+  <div class="focus-foot"><div class="focus-foot-in" id="focusFoot"></div></div>
+</section>
 
 <footer>
   <span>Exercise names and muscle groups from the</span>
@@ -2923,7 +3119,7 @@
                 customEx:"ptp-custom-ex", customSplits:"ptp-custom-splits",
                 cardioPlans:"ptp-cardio-plans", cardioLog:"ptp-cardio-log",
                 cardioMachines:"ptp-cardio-machines", exPrefs:"ptp-ex-prefs",
-                trayDate:"ptp-tray-date" };
+                trayDate:"ptp-tray-date", timers:"ptp-timers" };
 
   /* Everything here comes back from storage that an older version of this app
      wrote, that a sync tool touched, or that a user pasted in by hand. JSON.parse
@@ -3032,6 +3228,7 @@
     "chevron-right": "<path d=\"M9 6l6 6l-6 6\" />",
     "chevron-up": "<path d=\"M6 15l6 -6l6 6\" />",
     "dots": "<path d=\"M4 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M18 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" />",
+    "copy": "<path d=\"M7 9.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z\" /> <path d=\"M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1\" />",
     "dots-vertical": "<path d=\"M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M11 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M11 5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" />",
     "download": "<path d=\"M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2\" /> <path d=\"M7 11l5 5l5 -5\" /> <path d=\"M12 4l0 12\" />",
     "jump-rope": "<path d=\"M6 14v-6a3 3 0 1 1 6 0v8a3 3 0 0 0 6 0v-6\" /> <path d=\"M16 5a2 2 0 0 1 2 -2a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2a2 2 0 0 1 -2 -2l0 -3\" /> <path d=\"M4 16a2 2 0 0 1 2 -2a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2a2 2 0 0 1 -2 -2l0 -3\" />",
@@ -3254,6 +3451,20 @@
   tray = normalizeTray(load(KEY.tray, [], arrOfObj));
 
   function persistTray(){ save(KEY.tray, tray); }
+
+  /* Shared by the workout list and the exercise page. */
+  function normSetNum(v, max){
+    const t = String(v).trim().replace(/,/g, ".");
+    if(t === "") return "";
+    /* Full match only. Extracting the first number instead would turn "1e5"
+       into 1 and "-5" into 5 — quietly recording something the user did not
+       type, which is worse than clearing a field they can see is empty. */
+    if(!/^\d{1,6}(?:\.\d{1,2})?$/.test(t)) return "";
+    const n = parseFloat(t);
+    if(!isFinite(n) || n <= 0 || n > max) return "";
+    return String(Math.round(n * 100) / 100);
+  }
+
 
   /* The tray used to mean "today" and nothing else, which is why going back to a
      logged day to add one more exercise was impossible: the button said "Log
@@ -3512,7 +3723,7 @@
               </div>
               ${note ? `<div class="card-note">${esc(note)}</div>` : ""}
             </div>
-            <button type="button" class="add-btn${inTray ? " added" : ""}" aria-pressed="${inTray}"
+            <button type="button" class="add-btn${inTray ? " added" : ""}${fx.addBtn === ex.id ? " pop" : ""}" aria-pressed="${inTray}"
                   data-focus="add-${esc(ex.id)}"
                   title="${inTray ? "Remove from workout" : "Add to workout"}"
                   aria-label="${inTray ? "Remove" : "Add"} ${esc(ex.n)} ${inTray ? "from" : "to"} your workout">${inTray ? ico("check",17) : ico("plus",17)}</button>`;
@@ -3634,6 +3845,23 @@
             }).join("")}
           </select>
         </label>
+        <label class="field wide">Progression
+          <select id="edProg">
+            <option value="">Off — just show what I did last time</option>
+            ${Object.keys(PROG_RULES).map(k=>
+              `<option value="${k}"${pref.prog === k ? " selected" : ""}>${esc(PROG_RULES[k].name)} — ${esc(PROG_RULES[k].about)}</option>`).join("")}
+          </select>
+          <span class="hint">Suggests your next weight and reps from your own history. It never stops you logging something else.</span>
+        </label>
+        <label class="field">Add each time (${unit()})
+          <input type="text" inputmode="decimal" id="edProgInc" maxlength="5"
+                 value="${esc(pref.progInc || "")}" placeholder="${unit() === "lb" ? 5 : 2.5}">
+        </label>
+        <label class="field">Reps, or a range
+          <input type="text" id="edProgReps" maxlength="6"
+                 value="${esc(pref.progLo ? (pref.progHi && pref.progHi !== pref.progLo ? pref.progLo + "-" + pref.progHi : pref.progLo) : "")}"
+                 placeholder="5 or 8-12">
+        </label>
       </div>
 
       <div class="ed-actions">
@@ -3677,6 +3905,20 @@
          way setPref drops an empty note. Stored as a string for that reason. */
       rest: rest === null ? "" : String(rest)
     });
+
+    const progEl = root.querySelector("#edProg");
+    if(progEl){
+      const inc = parseFloat(String(root.querySelector("#edProgInc").value).replace(",", "."));
+      const m = String(root.querySelector("#edProgReps").value).trim().match(/^(\d{1,2})(?:\s*[-–]\s*(\d{1,2}))?$/);
+      const lo = m ? parseInt(m[1],10) : 0;
+      const hi = m && m[2] ? Math.max(lo, parseInt(m[2],10)) : lo;
+      setPref(ex.id, {
+        prog: PROG_RULES[progEl.value] ? progEl.value : "",
+        progInc: (isFinite(inc) && inc > 0 && inc <= 50) ? String(inc) : "",
+        progLo: lo ? String(lo) : "",
+        progHi: hi ? String(hi) : ""
+      });
+    }
 
     if(ex.custom){
       const rec = customEx.find(c=>(c.uid || slug(c.n)) === ex.uid);
@@ -3842,6 +4084,22 @@
   }
 
   /* ================= Tray behaviour ================= */
+  /* One-shot animation flags. A handler names the single thing that is about to
+     appear; the next render gives that thing its entrance class and clears the
+     flag, so nothing else on screen moves and nothing replays. */
+  const fx = { rows:new Set(), sets:null, menu:null, tick:null, addBtn:null, focusDir:0, newSet:null };
+
+  /* An entrance class left on an element replays whenever its panel is hidden
+     and shown again — switching tab and back was enough. So the class is taken
+     off the moment the animation finishes, whichever render put it there. */
+  document.addEventListener("animationend", (e)=>{
+    const t = e.target;
+    if(t && t.classList && ["enter","pop","opening","slide-l","slide-r"].some(c=>t.classList.contains(c))){
+      t.classList.remove("enter", "pop", "opening", "slide-l", "slide-r");
+      t.style.animationDelay = "";
+    }
+  });
+
   function toggleTray(ex){
     const idx = tray.findIndex(t=>t.id===ex.id);
     if(idx>-1){
@@ -3851,6 +4109,7 @@
       showToast(`Removed ${ex.n}`);
     } else {
       tray.push(makeTrayItem(ex));
+      fx.rows.add(ex.id); fx.addBtn = ex.id;
       showToast(`Added ${ex.n}`);
     }
     persistTray(); renderGroups(); renderTray();
@@ -3917,7 +4176,45 @@
     return wavURI(new Array(rate).fill(0), rate);   // one second, looped
   }
 
-  let alarmTone = null, alarmHold = null, alarmReady = false;
+  /* ---- Sharing the phone's audio with your music ----
+     The v16 design held the audio session open with a silent loop for the whole
+     rest so the beep could fire with the app in the background. On a phone that
+     makes this page "the thing playing media": Spotify or Apple Music is paused or
+     turned down for as long as any rest runs, and pausing the loop did not hand the
+     audio back — only a reload did, which also lost the timer.
+
+     So the default is now music-first. Nothing plays until the rest ends; then a
+     short tone plays over the music and the session is handed straight back.
+     Holding the session is still available, as an explicit setting, for people who
+     would rather hear the timer with the phone locked than keep their music.
+
+     Safari 16.4+ exposes navigator.audioSession: "ambient" mixes with other audio
+     instead of interrupting it, "transient" is for a short sound that briefly sits
+     on top of it. Browsers without the API simply ignore these calls — and with
+     no hold loop there is nothing left for them to keep. */
+  function setAudioSession(type){
+    try{
+      if(navigator.audioSession && navigator.audioSession.type !== type) navigator.audioSession.type = type;
+    }catch(e){}
+  }
+  function restMode(){
+    return settings.restAlert === "off" ? "off" : (settings.restAlert === "background" ? "background" : "sound");
+  }
+  /* Drop out of the lock screen's Now Playing slot, which is the other way a
+     page keeps a claim on the audio after it has gone quiet. */
+  function releaseAudio(){
+    try{ if(alarmHold){ alarmHold.pause(); alarmHold.currentTime = 0; } }catch(e){}
+    try{
+      if("mediaSession" in navigator){
+        navigator.mediaSession.playbackState = "none";
+        navigator.mediaSession.metadata = null;
+      }
+    }catch(e){}
+    setAudioSession("ambient");
+  }
+  setAudioSession("ambient");
+
+  let alarmTone = null, alarmHold = null, alarmReady = false, releaseTimer = null;
   function alarmEls(){
     if(alarmTone) return;
     alarmTone = document.createElement("audio");
@@ -3942,6 +4239,7 @@
   function armAlarm(){
     alarmEls();
     if(alarmReady) return;
+    setAudioSession(restMode() === "background" ? "playback" : "ambient");
     try{
       alarmTone.volume = 0;
       const pr = alarmTone.play();
@@ -3950,12 +4248,14 @@
       alarmReady = true;
     }catch(e){ /* autoplay refused — the in-app beep and the toast still land */ }
   }
+  /* Only in the opt-in background mode. In the default mode this does nothing,
+     which is the fix: no loop, so nothing holds your music down. */
   function holdAudio(on){
+    if(!on){ releaseAudio(); return; }
+    if(restMode() !== "background") return;
     alarmEls();
-    try{
-      if(on){ if(alarmHold.paused){ const p = alarmHold.play(); if(p && p.catch) p.catch(()=>{}); } }
-      else { alarmHold.pause(); try{ alarmHold.currentTime = 0; }catch(e){} }
-    }catch(e){}
+    setAudioSession("playback");
+    try{ if(alarmHold.paused){ const p = alarmHold.play(); if(p && p.catch) p.catch(()=>{}); } }catch(e){}
   }
   function restNotify(title, body){
     if(!settings.restNotify) return;
@@ -3966,9 +4266,21 @@
     }catch(e){}
   }
   function fireRestAlarm(name){
-    if(settings.restAlert !== "off"){
+    if(restMode() !== "off"){
       alarmEls();
+      /* A notification-style sound: it sits on top of the music for a second and
+         a half, then the session goes straight back to mixing. */
+      if(restMode() === "sound") setAudioSession("transient");
       try{ alarmTone.currentTime = 0; const p = alarmTone.play(); if(p && p.catch) p.catch(()=>{}); }catch(e){}
+      clearTimeout(releaseTimer);
+      const done = ()=>{
+        clearTimeout(releaseTimer);
+        try{ alarmTone.pause(); alarmTone.currentTime = 0; }catch(e){}
+        if(!Object.keys(timers).length && !(typeof run !== "undefined" && run)) releaseAudio();
+        else if(restMode() === "sound") setAudioSession("ambient");
+      };
+      alarmTone.onended = done;
+      releaseTimer = setTimeout(done, 2500);     // belt and braces if "ended" never comes
     }
     /* iOS Safari has no Vibration API; a no-op there by design. */
     try{ if(navigator.vibrate) navigator.vibrate([200,100,200,100,320]); }catch(e){}
@@ -3976,7 +4288,7 @@
   }
 
   function clearItemTimer(id){
-    if(timers[id]){ clearInterval(timers[id].intervalId); delete timers[id]; }
+    if(timers[id]){ clearInterval(timers[id].intervalId); delete timers[id]; persistTimers(); }
     /* The silent loop is only worth its battery while something is counting. */
     if(!Object.keys(timers).length) holdAudio(false);
   }
@@ -3993,6 +4305,119 @@
     }
     return null;
   }
+  /* ================= Progression =================
+     The app has always shown what you lifted last time and never said what to
+     lift next. These three rules close that gap. The idea of offering them came
+     from openGym's feature list; nothing here was copied from it — that project
+     is AGPL and this file is not, so the rules are written from the published
+     descriptions of the programmes themselves.
+
+     A rule only ever SUGGESTS. It fills placeholders and offers one tap to
+     accept; it never blocks a different number and never marks a miss. A missed
+     session just produces the same suggestion again. */
+  /*<progression>*/
+  const PROG_RULES = {
+    linear: { name:"Linear",             lo:5, hi:5,
+              about:"Hit every set and the weight goes up next time. Miss three sessions running and it resets by 10%." },
+    double: { name:"Double progression", lo:8, hi:12,
+              about:"Add reps until every set reaches the top of the range, then add weight and start again at the bottom." },
+    gslp:   { name:"Greyskull LP",       lo:5, hi:5,
+              about:"Last set is as many as you can. Double the target earns a double jump; a missed set resets by 10%." }
+  };
+  function progRound(x, inc){
+    const step = inc > 0 ? inc : 1;
+    return Math.round((Math.round(x/step)*step)*100)/100;
+  }
+  /* One logged session -> the working weight and the sets done at it. The
+     working weight is the heaviest one logged, so warm-up sets on the way up
+     do not count for or against the rule. */
+  function progRead(sets){
+    const rows = (sets || []).map(x=>({
+      w: parseFloat(x && x.weight), r: parseInt(x && x.reps, 10)
+    })).filter(x=> isFinite(x.r) && x.r > 0);
+    if(!rows.length) return null;
+    const loaded = rows.filter(x=> isFinite(x.w) && x.w > 0);
+    if(!loaded.length) return { W:null, work:rows };
+    const W = Math.max.apply(null, loaded.map(x=>x.w));
+    return { W, work: loaded.filter(x=> x.w === W) };
+  }
+  /* rule: {type, inc, lo, hi}; sessions: newest first, each an array of sets. */
+  function nextTarget(rule, sessions){
+    if(!rule || !PROG_RULES[rule.type] || !sessions || !sessions.length) return null;
+    const last = progRead(sessions[0]);
+    if(!last) return null;
+    const inc = rule.inc > 0 ? rule.inc : 2.5;
+    const lo  = rule.lo  > 0 ? rule.lo  : PROG_RULES[rule.type].lo;
+    const hi  = Math.max(lo, rule.hi > 0 ? rule.hi : PROG_RULES[rule.type].hi);
+    const W = last.W, reps = last.work.map(x=>x.r);
+    const minR = Math.min.apply(null, reps);
+
+    if(rule.type === "double"){
+      /* Bodyweight work has no load to add, so it only ever chases a rep. */
+      if(W === null) return { weight:null, reps:minR + 1, amrap:false, why:"reps" };
+      if(minR >= hi)  return { weight:progRound(W + inc, inc), reps:lo, amrap:false, why:"up" };
+      return { weight:W, reps:Math.min(hi, Math.max(lo, minR + 1)), amrap:false, why:"reps" };
+    }
+    if(W === null) return null;            // the other two rules need a load
+
+    const reset = ()=>{
+      let d = progRound(W * 0.9, inc);
+      if(d >= W) d = progRound(W - inc, inc);
+      return Math.max(d, 0);
+    };
+    if(rule.type === "gslp"){
+      if(minR < lo) return { weight:reset(), reps:lo, amrap:true, why:"reset" };
+      const finalSet = reps[reps.length - 1];
+      const jump = finalSet >= lo * 2 ? inc * 2 : inc;
+      return { weight:progRound(W + jump, inc), reps:lo, amrap:true, why: jump > inc ? "up2" : "up" };
+    }
+    /* linear */
+    if(minR >= lo) return { weight:progRound(W + inc, inc), reps:lo, amrap:false, why:"up" };
+    let misses = 0;
+    for(const sess of sessions){
+      const s = progRead(sess);
+      if(!s || s.W !== W) break;
+      if(Math.min.apply(null, s.work.map(x=>x.r)) >= lo) break;
+      misses++;
+    }
+    if(misses >= 3) return { weight:reset(), reps:lo, amrap:false, why:"reset" };
+    return { weight:W, reps:lo, amrap:false, why:"hold" };
+  }
+  /*</progression>*/
+
+  function progRuleFor(exId){
+    const p = prefFor(exId);
+    if(!p.prog || !PROG_RULES[p.prog]) return null;
+    return { type:p.prog,
+             inc: parseFloat(p.progInc) || (unit() === "lb" ? 5 : 2.5),
+             lo:  parseInt(p.progLo,10) || 0,
+             hi:  parseInt(p.progHi,10) || 0 };
+  }
+  function sessionsFor(exId, exName, n){
+    const out = [];
+    for(const h of history){                       // newest first
+      const hit = h.items.find(i=> i.id === exId || i.n === exName);
+      if(!hit) continue;
+      const sets = hit.setLog.filter(s=> s.reps || s.weight);
+      if(sets.length) out.push(sets);
+      if(out.length >= n) break;
+    }
+    return out;
+  }
+  function nextFor(exId, exName){
+    const rule = progRuleFor(exId);
+    return rule ? nextTarget(rule, sessionsFor(exId, exName, 4)) : null;
+  }
+  /* `short` drops the unit for the pill — the column under it already says kg or
+     lb, and those two characters are the difference between one row and two. */
+  function nextLabel(t, short){
+    if(!t) return "";
+    const w = t.weight === null ? "" : (Math.round(t.weight*100)/100) + (short ? "" : unit()) + " × ";
+    return w + t.reps + (t.amrap ? "+" : "");
+  }
+  const NEXT_WHY = { up:"up from last time", up2:"double jump — you doubled the target",
+                     hold:"same again", reps:"one more rep", reset:"reset 10% and rebuild" };
+
   function lastTimeLine(lt){
     if(!lt) return "";
     return `<div class="last-time"><b>Last ${esc(shortDate(lt.date))}</b> · ${esc(lt.sets.map(setLabel).join(", "))}</div>`;
@@ -4042,25 +4467,61 @@
     armAlarm();
     holdAudio(true);
 
-    const state = { endsAt: Date.now() + item.restSeconds*1000, remaining: item.restSeconds, name: item.n };
+    runTimer(item, Date.now() + item.restSeconds*1000);
+  }
+
+  /* A running rest is saved as its end time, so a reload — or the phone
+     discarding the tab — resumes the countdown instead of losing it. Only the
+     end time is stored; the remaining time is always read off the clock. */
+  function persistTimers(){
+    const out = {};
+    Object.keys(timers).forEach(id=>{ out[id] = timers[id].endsAt; });
+    save(KEY.timers, out);
+  }
+  function runTimer(item, endsAt){
+    const state = { endsAt, remaining: Math.max(0, Math.round((endsAt - Date.now())/1000)), name: item.n, total: item.restSeconds };
+    const paint = left=>{
+      const el = document.getElementById("timer-" + item.id);
+      /* Only the time text, so the inlined icon beside it survives the tick. */
+      const t = el && el.querySelector(".t");
+      if(t) t.textContent = formatTime(left);
+      document.querySelectorAll('[data-tleft="' + item.id + '"]').forEach(x=>{ x.textContent = formatTime(left); });
+      document.querySelectorAll('[data-tbar="' + item.id + '"]').forEach(x=>{
+        const tot = state.total > 0 ? state.total : 1;
+        x.style.transform = "scaleX(" + Math.max(0, Math.min(1, left / tot)).toFixed(3) + ")";
+      });
+    };
     state.intervalId = setInterval(()=>{
       const left = Math.round((state.endsAt - Date.now())/1000);
       state.remaining = left;
       if(left <= 0){
         clearInterval(state.intervalId);
         delete timers[item.id];
-        if(!Object.keys(timers).length) holdAudio(false);
+        persistTimers();
+        /* Tone first; it hands the audio back itself once it has played. */
         fireRestAlarm(state.name);
         showToast(state.name + " — rest done");
         renderTray();
         return;
       }
-      const el = document.getElementById("timer-" + item.id);
-      /* Only the time text, so the inlined icon beside it survives the tick. */
-      const t = el && el.querySelector(".t");
-      if(t) t.textContent = formatTime(left);
+      paint(left);
     }, 250);
     timers[item.id] = state;
+    persistTimers();
+  }
+  function restoreTimers(){
+    const saved = load(KEY.timers, {}, isObj);
+    let missed = 0;
+    Object.keys(saved).forEach(id=>{
+      const endsAt = Number(saved[id]);
+      const item = tray.find(t=>t.id === id);
+      if(!item || !isFinite(endsAt)) return;
+      if(endsAt > Date.now() + 1000) runTimer(item, endsAt);
+      else if(Date.now() - endsAt < 15*60*1000) missed++;
+    });
+    persistTimers();
+    if(missed) showToast(missed === 1 ? "Your rest finished while the app was closed" : "Your rests finished while the app was closed");
+    if(Object.keys(timers).length) renderTray();
   }
 
   /* Returning to the app after it was frozen: redraw against the clock rather
@@ -4074,7 +4535,12 @@
         clearInterval(st.intervalId); delete timers[id]; changed = true;
       }
     });
-    if(!Object.keys(timers).length) holdAudio(false);
+    if(changed){
+      persistTimers();
+      /* A tone now would be late noise — the rest ended while you were away. */
+      showToast("Rest finished while you were away");
+    }
+    if(!Object.keys(timers).length && !(typeof run !== "undefined" && run)) releaseAudio();
     if(changed) renderTray();
   });
   function supersetLabels(){
@@ -4110,9 +4576,14 @@
     trayEmptyEl.style.display = tray.length ? "none" : "block";
     const labels = supersetLabels();
 
+    let fxOrder = 0;
     tray.forEach((item)=>{
       const row = document.createElement("div");
       row.className = "tray-item";
+      if(fx.rows.has(item.id)){
+        row.classList.add("enter");
+        row.style.animationDelay = Math.min(fxOrder++, 8) * 35 + "ms";
+      }
       row.dataset.id = item.id;
       row.dataset.focusKey = item.id;
       row.style.setProperty("--item-color", `var(--${item.cat})`);
@@ -4120,6 +4591,7 @@
 
       const allDone = item.setLog.length>0 && item.setLog.every(s=>s.done);
       const lt = lastTimeFor(item.id, item.n);
+      const nx = allDone ? null : nextFor(item.id, item.n);
       const ts = timers[item.id];
       let timerBadge = "";
       if(ts){
@@ -4129,30 +4601,9 @@
       }
       const ssBadge = item.supersetId ? `<span class="badge superset-badge">${ico("link",13,"inline")} Superset ${labels[item.supersetId]}</span>` : "";
 
-      const setRows = item.expanded ? `
-        <div class="set-rows">
-          <div class="set-head">
-            <span class="set-num"></span>
-            <span class="col-lbl">Weight (${unit()})</span>
-            <span class="col-lbl">Reps</span>
-            <span class="col-spacer"></span>
-          </div>
-          ${item.setLog.map((s,si)=>`
-            <div class="set-row${s.done ? " done" : ""}">
-              <span class="set-num">Set ${si+1}</span>
-              <input type="text" size="4" class="set-input weight-input" inputmode="decimal" data-idx="${si}"
-                     placeholder="${esc((lt && lt.sets[si] && lt.sets[si].weight) || "—")}"
-                     value="${esc(s.weight || "")}" aria-label="Set ${si+1} weight in ${unit()}">
-              <input type="text" size="4" class="set-input reps-input" inputmode="numeric" data-idx="${si}"
-                     placeholder="${esc((lt && lt.sets[si] && lt.sets[si].reps) || "—")}"
-                     value="${esc(s.reps)}" aria-label="Set ${si+1} reps">
-              <label class="check-wrap">
-                <input type="checkbox" data-idx="${si}" data-focus="done-${si}" ${s.done ? "checked" : ""}
-                       aria-label="Set ${si+1} of ${esc(item.n)} complete">
-                <span class="checkmark" aria-hidden="true">${ico("check",16)}</span>
-              </label>
-            </div>`).join("")}
-        </div>` : "";
+      /* Sets are logged on the exercise's own page now (openFocus) — the list is
+         an overview, which is also what keeps it short enough to scan. */
+      const setRows = "";
 
       const others = tray.filter(t=>t.id!==item.id);
       const ssRows = others.length
@@ -4168,7 +4619,7 @@
 
       const pos = tray.indexOf(item);
       const menu = openMenuFor === item.id ? `
-        <div class="menu-popover">
+        <div class="menu-popover${fx.menu === item.id ? " enter" : ""}">
           <div class="menu-section">
             <div class="menu-title">Order in this workout</div>
             <div class="menu-order">
@@ -4192,6 +4643,17 @@
               <button type="button" class="set-custom-timer">Set</button>
             </div>
           </div>
+          <div class="menu-section">
+            <div class="menu-title">Progression</div>
+            <div class="timer-chips">
+              ${[["","Off"],["linear","Linear"],["double","Double"],["gslp","Greyskull"]].map(o=>{
+                const on = (prefFor(item.id).prog || "") === o[0];
+                return `<button type="button" class="timer-chip${on?" active":""}" data-prog="${o[0]}" aria-pressed="${on}">${o[1]}</button>`;
+              }).join("")}
+            </div>
+            ${prefFor(item.id).prog && PROG_RULES[prefFor(item.id).prog]
+              ? `<div class="menu-empty">${esc(PROG_RULES[prefFor(item.id).prog].about)}</div>` : ""}
+          </div>
           <div class="menu-section menu-remove">
             <button type="button" class="btn btn-danger rm"
                     aria-label="Remove ${esc(item.n)} from this workout">${ico("trash",14,"inline")} Remove from workout</button>
@@ -4202,8 +4664,12 @@
         <div class="tray-item-head">
           <div class="head-left">
             <div class="ex-name">${allDone ? ico("check",14,"inline done-tick") : ""}${esc(item.n)}</div>
-            <div class="head-meta"><span class="badge">${esc(item.eq)}</span>${ssBadge}${timerBadge}</div>
+            <div class="head-meta">${nx ? "" : `<span class="badge">${esc(item.eq)}</span>`}${ssBadge}${timerBadge}${nx ? `<button type="button" class="badge next-pill" data-next data-focus="next"
+                title="${esc(PROG_RULES[prefFor(item.id).prog].name)} — ${esc(NEXT_WHY[nx.why] || "")}. Tap to fill your sets."
+                aria-label="Next target ${esc(nextLabel(nx))}, ${esc(NEXT_WHY[nx.why] || "")}. Fill the empty sets.">${ico("arrow-up-right",12,"inline")}${esc(nextLabel(nx, true))}</button>` : ""}</div>
             ${lastTimeLine(lt)}
+            ${(()=>{ const d = item.setLog.filter(x=>x.done).length, n = item.setLog.length;
+                     return d ? `<div class="row-progress${d === n ? " all" : ""}">${d === n ? "All " + n + " sets done" : d + " of " + n + " sets done"}</div>` : ""; })()}
             ${prefFor(item.id).note ? `<div class="item-note">${esc(prefFor(item.id).note)}</div>` : ""}
           </div>
           <div class="head-right">
@@ -4212,9 +4678,9 @@
                     aria-expanded="${openMenuFor === item.id}"
                     title="Superset and rest timer"
                     aria-label="More options for ${esc(item.n)}">${ico("dots-vertical",16)}</button>
-            <button type="button" class="icon-btn expand-btn" data-focus="expand" aria-expanded="${item.expanded}"
-                    title="${item.expanded?"Hide":"Show"} the set rows"
-                    aria-label="${item.expanded?"Collapse":"Expand"} ${esc(item.n)} sets">${item.expanded ? ico("chevron-up",17) : ico("chevron-down",17)}</button>
+            <button type="button" class="icon-btn open-btn" data-focus="open"
+                    title="Log your sets"
+                    aria-label="Open ${esc(item.n)} to log sets">${ico("chevron-right",18)}</button>
           </div>
         </div>
         ${setRows}
@@ -4227,10 +4693,30 @@
       row.querySelector(".ellipsis").addEventListener("click", (e)=>{
         e.stopPropagation();
         openMenuFor = (openMenuFor === item.id) ? null : item.id;
+        if(openMenuFor) fx.menu = item.id;
         renderTray();
       });
-      row.querySelector(".expand-btn").addEventListener("click", ()=>{
-        item.expanded = !item.expanded; persistTray(); renderTray();
+      row.querySelector(".open-btn").addEventListener("click", ()=> openFocus(item.id));
+      /* The whole name area opens it too — the chevron is the labelled control,
+         this is just a bigger place to aim a thumb. */
+      row.querySelector(".head-left").addEventListener("click", (e)=>{
+        if(e.target.closest("button, a, input, label")) return;
+        openFocus(item.id);
+      });
+      const nextBtn = row.querySelector("[data-next]");
+      if(nextBtn && nx) nextBtn.addEventListener("click", ()=>{
+        /* Only blank, unticked sets are filled — a number the user already typed
+           is a decision, and a suggestion does not get to overrule it. */
+        let filled = 0;
+        item.setLog.forEach(st=>{
+          if(st.done || st.weight || st.reps) return;
+          st.weight = nx.weight === null ? "" : String(nx.weight);
+          st.reps   = String(nx.reps);
+          filled++;
+        });
+        persistTray();
+        openFocus(item.id);
+        showToast(filled ? `Filled ${filled} set${filled>1?"s":""} — ${nextLabel(nx)}` : "Your sets already have numbers in them");
       });
       const rmBtn = row.querySelector(".rm");
       if(rmBtn) rmBtn.addEventListener("click", ()=>{
@@ -4249,17 +4735,7 @@
          and then the share encoder's digit filter turned them into 15 and 5: the
          readable half of a shared message and its machine-readable half
          disagreed, and only the wrong half was parsed. */
-      const normNum = (v, max)=>{
-        const t = String(v).trim().replace(/,/g, ".");
-        if(t === "") return "";
-        /* Full match only. Extracting the first number instead would turn "1e5"
-           into 1 and "-5" into 5 — quietly recording something the user did not
-           type, which is worse than clearing a field they can see is empty. */
-        if(!/^\d{1,6}(?:\.\d{1,2})?$/.test(t)) return "";
-        const n = parseFloat(t);
-        if(!isFinite(n) || n <= 0 || n > max) return "";
-        return String(Math.round(n * 100) / 100);
-      };
+      const normNum = normSetNum;
       const bindNum = (sel, field, max)=>{
         row.querySelectorAll(sel).forEach(inp=>{
           inp.addEventListener("input", ()=>{
@@ -4285,6 +4761,7 @@
         cb.addEventListener("change", ()=>{
           const idx = parseInt(cb.dataset.idx,10);
           item.setLog[idx].done = cb.checked;
+          if(cb.checked) fx.tick = item.id + ":" + idx;
           /* Most sets repeat the one before them, so completing a set carries its
              numbers into the next blank one — otherwise a second field would just
              double the typing. Typing over it is all it takes to change. */
@@ -4317,7 +4794,13 @@
             if(partner) toggleSupersetLink(item, partner);
           });
         });
-        row.querySelectorAll(".timer-chip").forEach(chip=>{
+        row.querySelectorAll("[data-prog]").forEach(chip=>{
+          chip.addEventListener("click", ()=>{
+            setPref(item.id, { prog: chip.dataset.prog });
+            renderTray(); renderGroups();
+          });
+        });
+        row.querySelectorAll(".timer-chip[data-sec]").forEach(chip=>{
           chip.addEventListener("click", ()=>{
             item.restSeconds = parseInt(chip.dataset.sec,10) || 0;
             clearItemTimer(item.id); persistTray(); renderTray();
@@ -4343,21 +4826,46 @@
     openMenuFor = null; renderTray();
   });
 
+  /* ---- the workout's ⋯ menu ---- */
+  const sessMore = document.getElementById("sessMore");
+  const sessMenu = document.getElementById("sessMenu");
+  function closeSessMenu(refocus){
+    if(!sessMenu.classList.contains("open")) return;
+    sessMenu.classList.remove("open"); sessMore.setAttribute("aria-expanded","false");
+    if(refocus) sessMore.focus();
+  }
+  sessMore.addEventListener("click", (e)=>{
+    e.stopPropagation();
+    const open = sessMenu.classList.toggle("open");
+    sessMore.setAttribute("aria-expanded", open ? "true" : "false");
+    document.getElementById("clearBtn").disabled = !tray.length;
+    document.getElementById("copyBtn").disabled = !tray.length;
+  });
+  document.addEventListener("click", (e)=>{ if(!e.target.closest("#sessMenu")) closeSessMenu(); });
+  document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") closeSessMenu(true); });
+
   document.getElementById("clearBtn").addEventListener("click", ()=>{
+    closeSessMenu();
     if(!tray.length) return;
     const done = tray.reduce((a,t)=> a + t.setLog.filter(x=>x.done).length, 0);
-    if(!confirm(`Clear all ${tray.length} exercise${tray.length>1?"s":""} from your workout?`
-      + (done ? `\n\n${done} completed set${done>1?"s":""} will be lost — log the session first to keep them.` : "")
-      + "\n\nThis cannot be undone.")) return;
+    if(done && !confirm(`Clear your workout? ${done} completed set${done>1?"s":""} haven't been logged yet.`)) return;
+    /* Kept for Undo. Timers are not — a rest that was running is over either way. */
+    const keep = { tray: JSON.parse(JSON.stringify(tray)), date: trayDate };
     Object.keys(timers).forEach(clearItemTimer);
     tray = []; openMenuFor = null;
     /* The date belongs to the workout that was in the tray, not to the tray. */
     setTrayDate("");
     persistTray(); renderTray(); renderGroups();
-    showToast("Workout cleared");
+    showToast("Workout cleared", { label:"Undo", ms:7000, run: ()=>{
+      if(tray.length){ showToast("Your new workout was kept"); return; }
+      tray = keep.tray; setTrayDate(keep.date || "");
+      persistTray(); renderTray(); renderGroups();
+      showToast("Workout restored");
+    }});
   });
 
   document.getElementById("copyBtn").addEventListener("click", async ()=>{
+    closeSessMenu();
     if(!tray.length){ showToast("Nothing to copy yet"); return; }
     const labels = supersetLabels();
     const lines = tray.map(t=>{
@@ -4409,6 +4917,7 @@
 
   function renderSessionHeader(){
     renderTrayDateBar();
+    { const m = document.getElementById("sessMore"); if(m) m.hidden = !tray.length; }
     const msCount = document.getElementById("msCount");
     msCount.textContent = tray.length;
     msCount.dataset.empty = tray.length ? "0" : "1";
@@ -4512,6 +5021,7 @@
       if(!ex) return;
       if(tray.some(t=>t.id===ex.id)) return;
       tray.push(makeTrayItem(ex));
+      fx.rows.add(ex.id);
       added++;
     });
     persistTray(); renderTray(); renderGroups();
@@ -5148,11 +5658,20 @@
   let audioCtx = null;
 
   /* A tone, synthesised rather than fetched — it has to work with no signal. */
+  /* A running AudioContext holds the audio session exactly as the old loop did,
+     so it is suspended again as soon as its notes have played. */
+  let beepRelease = null;
   function beep(count){
     if(!settings.cardioSound) return;
     try{
+      if(restMode() !== "background") setAudioSession("transient");
       audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
       if(audioCtx.state === "suspended") audioCtx.resume();
+      clearTimeout(beepRelease);
+      beepRelease = setTimeout(()=>{
+        try{ audioCtx.suspend(); }catch(e){}
+        if(restMode() !== "background") setAudioSession("ambient");
+      }, count * 220 + 450);
       for(let i=0;i<count;i++){
         const t0 = audioCtx.currentTime + i*0.22;
         const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
@@ -6394,7 +6913,7 @@
       document.getElementById(stFields[k]).value = settings[k];
     });
     document.getElementById("stCardioCues").value = cueChoice();
-    document.getElementById("stRestAlert").value = settings.restAlert === "off" ? "off" : "sound";
+    document.getElementById("stRestAlert").value = restMode();
     document.getElementById("stRestNotify").value = settings.restNotify ? "on" : "off";
     renderNotifyHint();
   }
@@ -6430,7 +6949,9 @@
     const cues = document.getElementById("stCardioCues").value;
     settings.cardioSound   = cues === "both" || cues === "sound";
     settings.cardioVibrate = cues === "both" || cues === "vibrate";
-    settings.restAlert  = document.getElementById("stRestAlert").value === "off" ? "off" : "sound";
+    const ra = document.getElementById("stRestAlert").value;
+    settings.restAlert  = (ra === "off" || ra === "background") ? ra : "sound";
+    if(settings.restAlert !== "background") releaseAudio();
     const wantNotify    = document.getElementById("stRestNotify").value === "on";
 
     /* Asking here rather than at load: the Save press is a gesture, and a prompt
@@ -7515,12 +8036,20 @@
 
   /* ================= Toast ================= */
   let toastTimer = null;
-  function showToast(msg){
+  /* action: { label, run, ms } adds one button (Undo) and keeps the toast up longer. */
+  function showToast(msg, action){
     const t = document.getElementById("toast");
     t.textContent = msg;
+    t.classList.toggle("has-action", !!action);
+    if(action){
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "toast-act"; b.textContent = action.label;
+      b.addEventListener("click", ()=>{ clearTimeout(toastTimer); t.classList.remove("show","has-action"); action.run(); });
+      t.appendChild(b);
+    }
     t.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(()=> t.classList.remove("show"), 1900);
+    toastTimer = setTimeout(()=> t.classList.remove("show", "has-action"), action ? (action.ms || 6000) : 1900);
   }
 
   /* Focus-preserving wrappers. Each renderer replaces its container wholesale;
@@ -7529,8 +8058,208 @@
      site — including ones above this point — working unchanged. */
   function renderTiles(){     keepFocus(tilesEl,     renderTiles__body); }
   function renderSubgroups(){ keepFocus(subgroupsEl, renderSubgroups__body); }
-  function renderGroups(){    keepFocus(groupsEl,    renderGroups__body); }
-  function renderTray(){      keepFocus(trayListEl,  renderTray__body); }
+  /* ================= The exercise page =================
+     Opened from the workout list. It owns everything about logging one exercise:
+     the sets, the ticks, adding or removing a set, the next-target suggestion and
+     the rest countdown, with previous / next to walk the workout in order. It is
+     a history entry, so the phone's back gesture closes it. */
+  let focusId = null;
+  const focusPage = document.getElementById("focusPage");
+  const focusBody = document.getElementById("focusBody");
+  const focusFoot = document.getElementById("focusFoot");
+
+  function openFocus(id, dir){
+    const item = tray.find(t=>t.id === id);
+    if(!item) return;
+    const wasOpen = !!focusId;
+    focusId = id;
+    openMenuFor = null;
+    fx.focusDir = dir || 0;
+    focusPage.hidden = false;
+    if(!wasOpen) focusPage.classList.add("opening");
+    document.body.classList.add("focus-open");
+    renderFocus();
+    focusPage.scrollTop = 0;
+    /* window.history: `history` in this file is the workout log. */
+    try{
+      if(wasOpen) window.history.replaceState({ ptpFocus:id }, "");
+      else window.history.pushState({ ptpFocus:id }, "");
+    }catch(e){}
+    if(!wasOpen){ const b = document.getElementById("focusBack"); if(b) b.focus({ preventScroll:true }); }
+  }
+  function closeFocus(fromHistory){
+    if(!focusId) return;
+    const id = focusId;
+    focusId = null;
+    focusPage.hidden = true;
+    document.body.classList.remove("focus-open");
+    renderTray();
+    if(!fromHistory){ try{ if(window.history.state && window.history.state.ptpFocus) window.history.back(); }catch(e){} }
+    const btn = trayListEl.querySelector('.tray-item[data-id="' + CSS.escape(id) + '"] .open-btn');
+    if(btn) btn.focus({ preventScroll:true });
+  }
+  window.addEventListener("popstate", ()=>{
+    if(focusId && !(window.history.state && window.history.state.ptpFocus)) closeFocus(true);
+  });
+  document.addEventListener("keydown", (e)=>{ if(e.key === "Escape" && focusId) closeFocus(); });
+  document.getElementById("focusBack").addEventListener("click", ()=> closeFocus());
+
+  function renderFocus(){ if(focusId) keepFocus(focusPage, renderFocus__body); }
+  function renderFocus__body(){
+    const idx = tray.findIndex(t=>t.id === focusId);
+    if(idx < 0){ closeFocus(); return; }
+    const item = tray[idx];
+    const labels = supersetLabels();
+    const done = item.setLog.filter(x=>x.done).length;
+    const allDone = item.setLog.length > 0 && done === item.setLog.length;
+    const lt = lastTimeFor(item.id, item.n);
+    const nx = allDone ? null : nextFor(item.id, item.n);
+    const ts = timers[item.id];
+    const nextIdx = item.setLog.findIndex(x=>!x.done);
+
+    document.getElementById("focusPos").textContent = (idx + 1) + " of " + tray.length;
+    focusPage.style.setProperty("--item-color", `var(--${item.cat})`);
+    focusPage.style.setProperty("--item-ink", `var(--on-${item.cat})`);
+
+    const rest = ts
+      ? `<div class="fx-rest on" role="timer" aria-live="off">
+           <div class="fx-rest-k">Resting</div>
+           <div class="fx-rest-v" data-tleft="${esc(item.id)}">${formatTime(Math.max(0, ts.remaining))}</div>
+           <button type="button" class="btn fx-rest-skip" data-fskip>Skip rest</button>
+           <div class="fx-rest-bar"><i data-tbar="${esc(item.id)}"
+             style="transform:scaleX(${(ts.total > 0 ? Math.max(0, Math.min(1, ts.remaining / ts.total)) : 0).toFixed(3)})"></i></div>
+         </div>`
+      : `<div class="fx-rest idle">${item.restSeconds > 0
+           ? `${ico("stopwatch",15,"inline")} ${formatTime(item.restSeconds)} rest starts when you tick a set`
+           : "No rest timer on this exercise"}</div>`;
+
+    const rows = item.setLog.map((st, si)=>`
+      <div class="set-row${st.done ? " done" : ""}${si === nextIdx ? " up-next" : ""}${fx.newSet === item.id + ":" + si ? " enter" : ""}">
+        <span class="set-num">Set ${si+1}</span>
+        <input type="text" size="4" class="set-input weight-input" inputmode="decimal" data-idx="${si}" data-focus="fw-${si}"
+               placeholder="${esc(nx ? (nx.weight === null ? "—" : String(nx.weight)) : ((lt && lt.sets[si] && lt.sets[si].weight) || "—"))}"
+               value="${esc(st.weight || "")}" aria-label="Set ${si+1} weight in ${unit()}">
+        <input type="text" size="4" class="set-input reps-input" inputmode="numeric" data-idx="${si}" data-focus="fr-${si}"
+               placeholder="${esc(nx ? String(nx.reps) + (nx.amrap && si === item.setLog.length-1 ? "+" : "") : ((lt && lt.sets[si] && lt.sets[si].reps) || "—"))}"
+               value="${esc(st.reps || "")}" aria-label="Set ${si+1} reps">
+        <label class="check-wrap">
+          <input type="checkbox" data-idx="${si}" data-focus="fd-${si}" ${st.done ? "checked" : ""}
+                 aria-label="Set ${si+1} of ${esc(item.n)} complete">
+          <span class="checkmark${fx.tick === item.id + ":" + si ? " pop" : ""}" aria-hidden="true">${ico("check",16)}</span>
+        </label>
+      </div>`).join("");
+
+    focusBody.className = "focus-body" + (fx.focusDir > 0 ? " slide-l" : fx.focusDir < 0 ? " slide-r" : "");
+    focusBody.innerHTML = `
+      <div class="fx-eyebrow"><i class="fx-dot"></i>${esc(CAT_LABEL[item.cat] || "")} · ${esc(item.eq)}${
+        item.supersetId ? ` · Superset ${labels[item.supersetId]}` : ""}</div>
+      <h2 class="fx-title" id="focusTitle">${esc(item.n)}</h2>
+      <div class="fx-meta">
+        ${nx ? `<button type="button" class="badge next-pill" data-fnext data-focus="fnext"
+                  aria-label="Next target ${esc(nextLabel(nx))}. Fill the empty sets.">${ico("arrow-up-right",12,"inline")}${esc(nextLabel(nx))}</button>` : ""}
+        ${lastTimeLine(lt)}
+      </div>
+      ${prefFor(item.id).note ? `<div class="item-note fx-note">${esc(prefFor(item.id).note)}</div>` : ""}
+      ${rest}
+      <div class="set-rows fx-rows">
+        <div class="set-head">
+          <span class="set-num"></span>
+          <span class="col-lbl">Weight (${unit()})</span>
+          <span class="col-lbl">Reps</span>
+          <span class="col-spacer"></span>
+        </div>
+        ${rows}
+      </div>
+      <div class="fx-setctl">
+        <button type="button" class="btn" data-faddset data-focus="faddset" ${item.sets >= 20 ? "disabled" : ""}>${ico("plus",15,"inline")} Add a set</button>
+        <button type="button" class="btn" data-fdropset data-focus="fdropset" ${item.sets <= 1 ? "disabled" : ""}>Remove last set</button>
+      </div>
+      <p class="fx-progress${allDone ? " all" : ""}" aria-live="polite">${allDone
+        ? `${ico("check",15,"inline")} All ${item.setLog.length} sets done`
+        : `${done} of ${item.setLog.length} sets done`}</p>`;
+    fx.focusDir = 0; fx.newSet = null;
+
+    const prev = tray[idx - 1], next = tray[idx + 1];
+    focusFoot.innerHTML = `
+      <button type="button" class="btn fx-prev" data-fprev ${prev ? "" : "disabled"}
+              aria-label="${prev ? "Previous exercise: " + esc(prev.n) : "No previous exercise"}">${ico("chevron-left",20)}</button>
+      ${next
+        ? `<button type="button" class="btn fx-next${allDone ? " ready" : ""}" data-fnextex>
+             <span class="fx-next-k">${allDone ? "Next" : "Up next"}</span>
+             <span class="fx-next-n">${esc(next.n)}</span>${ico("chevron-right",18)}</button>`
+        : `<button type="button" class="btn fx-next${allDone ? " ready" : ""}" data-fdone>
+             <span class="fx-next-n">${allDone ? "Done — back to workout" : "Back to workout"}</span></button>`}`;
+
+    /* ---- handlers ---- */
+    focusBody.querySelectorAll(".set-input").forEach(inp=>{
+      const field = inp.classList.contains("weight-input") ? "weight" : "reps";
+      const max = field === "weight" ? 2000 : 200;
+      inp.addEventListener("input", ()=>{
+        item.setLog[parseInt(inp.dataset.idx,10)][field] = inp.value;
+        persistTray();
+      });
+      inp.addEventListener("blur", ()=>{
+        const i = parseInt(inp.dataset.idx,10);
+        const clean = normSetNum(inp.value, max);
+        if(clean !== inp.value){ inp.value = clean; item.setLog[i][field] = clean; persistTray(); }
+      });
+    });
+    focusBody.querySelectorAll(".set-row input[type=checkbox]").forEach(cb=>{
+      cb.addEventListener("change", ()=>{
+        const i = parseInt(cb.dataset.idx,10);
+        item.setLog[i].done = cb.checked;
+        if(cb.checked){ fx.tick = item.id + ":" + i; carryForward(item, i); }
+        persistTray();
+        if(cb.checked && item.restSeconds > 0) startRestTimer(item);
+        renderTray();
+        if(cb.checked && item.setLog.every(x=>x.done)){
+          const nxt = tray[tray.indexOf(item) + 1];
+          showToast(nxt ? `All sets done — next up, ${nxt.n}` : "All sets done");
+        }
+      });
+    });
+    const fskip = focusBody.querySelector("[data-fskip]");
+    if(fskip) fskip.addEventListener("click", ()=>{ clearItemTimer(item.id); renderTray(); showToast("Rest skipped"); });
+    const fnext = focusBody.querySelector("[data-fnext]");
+    if(fnext && nx) fnext.addEventListener("click", ()=>{
+      let filled = 0;
+      item.setLog.forEach(st=>{
+        if(st.done || st.weight || st.reps) return;
+        st.weight = nx.weight === null ? "" : String(nx.weight);
+        st.reps = String(nx.reps);
+        filled++;
+      });
+      persistTray(); renderTray();
+      showToast(filled ? `Filled ${filled} set${filled>1?"s":""} — ${nextLabel(nx)}` : "Your sets already have numbers in them");
+    });
+    focusBody.querySelector("[data-faddset]").addEventListener("click", ()=>{
+      if(item.sets >= 20) return;
+      resizeSetLog(item, item.sets + 1);
+      fx.newSet = item.id + ":" + (item.sets - 1);
+      persistTray(); renderTray();
+    });
+    focusBody.querySelector("[data-fdropset]").addEventListener("click", ()=>{
+      if(item.sets <= 1) return;
+      const last = item.setLog[item.setLog.length - 1];
+      if(last && last.done && !confirm("Set " + item.setLog.length + " is ticked off. Remove it anyway?")) return;
+      resizeSetLog(item, item.sets - 1);
+      persistTray(); renderTray();
+    });
+    const fp = focusFoot.querySelector("[data-fprev]");
+    if(fp && prev) fp.addEventListener("click", ()=> openFocus(prev.id, -1));
+    const fn = focusFoot.querySelector("[data-fnextex]");
+    if(fn && next) fn.addEventListener("click", ()=> openFocus(next.id, 1));
+    const fd = focusFoot.querySelector("[data-fdone]");
+    if(fd) fd.addEventListener("click", ()=> closeFocus());
+  }
+
+  /* Each render spends the animation flags it used, so an entrance plays once. */
+  function renderGroups(){    keepFocus(groupsEl,    renderGroups__body); fx.addBtn = null; }
+  function renderTray(){      keepFocus(trayListEl,  renderTray__body);
+                              /* The exercise page draws from the same tray, so it is redrawn
+                                 with it — before the flags it also uses are spent. */
+                              if(focusId) renderFocus();
+                              fx.rows.clear(); fx.sets = null; fx.menu = null; fx.tick = null; }
   function renderCalendar(){  keepFocus(calGrid,     renderCalendar__body); }
   /* The day detail is its own element, not part of the grid, and now holds text
      inputs that re-render on every change. Without its own focus keeper, typing
@@ -7587,6 +8316,7 @@
   step("share", renderShare);
   step("version", renderVersion);
   step("view", ()=> setView("train"));
+  step("rest timers", restoreTimers);
   updateStorageWarning();
 
   if(initFailures.length){

@@ -441,6 +441,89 @@ Things that look like details and are not:
     is also the furthest Clear has ever been from Log, which is invariant 34's
     problem solved a second way.
 
+43. **Progression rules suggest; they never decide.** Linear, double progression
+    and Greyskull LP are a per-exercise preference (`prog`, `progInc`, `progLo`,
+    `progHi` in `ptp-ex-prefs` — no new storage key, so backup and reset already
+    cover them). A rule fills placeholders and offers one tap to accept. It only
+    fills sets that are blank and unticked — a number you typed is a decision and
+    a suggestion does not overrule it — and a missed session simply produces the
+    same suggestion again. Nothing turns red.
+
+44. **The progression engine is a pure block between `/*<progression>*/`
+    markers.** `tests/progression.test.js` lifts that block out of `index.html`
+    and runs it directly, so the code under test is the code that ships. Keep it
+    free of DOM, storage and `unit()` so that stays true. The working weight is
+    the heaviest logged, so warm-up sets can neither pass nor fail a rule.
+
+45. **The idea came from openGym; none of the code did.** That project is
+    AGPL-3.0 and this one is not, and its exercise media is licensed for openGym
+    only. The three rules were written from the published descriptions of the
+    programmes. Do not paste from it.
+
+46. **The next-target pill replaces the equipment badge; it does not join it.**
+    Three badges do not fit beside the row's controls at 390px, and a wrapped
+    pill costs a whole row on every exercise — there is a test asserting the
+    suggestion adds no height. It also drops the unit for the same reason: the
+    column beneath already says kg or lb.
+
+47. **Only what changed moves.** The tray, directory and calendar rebuild their
+    markup on every interaction, so an animation on an always-present class
+    replays across the whole list each time a set is ticked. Entrances are keyed
+    off the one-shot `fx` flags a handler sets for the single thing about to
+    appear; each render spends the flags it used; and a document-level
+    `animationend` listener strips `.enter`/`.pop`, because a class left behind
+    replays whenever its panel is hidden and shown again.
+
+48. **Never put a filter or transform on `<header>`.** The phone's bottom tab bar
+    is a `position: fixed` child of the header, and `backdrop-filter`, `filter`
+    and `transform` each make their element the containing block for fixed
+    descendants — the tab bar leaves the bottom of the screen and lands on the
+    header. The frosted effect therefore lives on `header::before`.
+
+49. **Motion is short, optional and never in the way.** Nothing exceeds about a
+    quarter of a second, nothing delays input, and `prefers-reduced-motion`
+    collapses every duration. Press feedback is listed per control rather than
+    applied to every button, because the floating pills and the toast own their
+    own transform.
+
+50. **The rest timer never holds the phone's audio.** iOS treats a page that is
+    playing an `<audio>` element as a media app and pauses or ducks your music
+    for as long as it plays. So the default alert ("Beep over my music") sets
+    `navigator.audioSession.type` to `ambient` at load, switches to `transient`
+    only for the two seconds the tone plays, and hands the session back
+    (`releaseAudio()`) as soon as no rest or cardio run is going. The silent
+    looping track that lets a beep fire with the phone locked is opt-in
+    ("Beep when locked"), and is released the moment its rest ends or is
+    skipped. Tests spy on `play()` and the session type to hold this.
+51. **Rest timers are wall-clock and saved.** Each running rest is stored as its
+    end time in `ptp-timers`, so a refresh or a relaunch resumes the countdown
+    where it really is; one that ended while the app was closed gets a toast,
+    not a late beep.
+52. **Sets are logged on the exercise's own page.** The workout list is an
+    overview — name, next target, rest, "N of M sets done" — and tapping a row
+    opens `#focusPage`, which holds only that exercise: its sets, ticks, Add a
+    set / Remove last set, the rest countdown, and Previous / Next to walk the
+    workout. It is a history entry, so the back gesture closes it. The page and
+    the list draw from the same `tray`; `renderTray()` redraws both. In this
+    file `history` is the workout log, so the page uses `window.history`.
+
+53. **Clearing a workout is out of the way and can be undone.** It used to sit
+    at the foot of the list, one slip below Log, and wiped workouts by accident.
+    It now lives in the workout's ⋯ menu at the top (with Copy as text), leaving
+    Log as the only control at the bottom. Clearing shows an Undo toast for
+    seven seconds; it only asks first when ticked sets haven't been logged.
+
+### Tests
+
+They live in `tests/` because the earlier suites lived only in a scratch
+directory and were lost, twice, when that machine was recycled.
+
+```
+node tests/progression.test.js        # the progression maths, no browser
+python3 -m http.server 8099           # then, in another terminal:
+node tests/app.test.js                # needs `npm i playwright`
+```
+
 ### The share format
 
 ```
