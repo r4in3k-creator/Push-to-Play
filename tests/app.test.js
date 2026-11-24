@@ -414,6 +414,22 @@ function contrast(a, b){
     await ctx.close();
   }
 
+  /* ---------- 9. credits behind the (i) ---------- */
+  {
+    const { ctx, p } = await open(PHONE);
+    const ft = (await p.textContent("footer")).trim();
+    ok("the front has no disclaimer text", ft==="", ft);
+    const hit = await p.$eval("#aboutLink", e=>{ const r=e.getBoundingClientRect(); return Math.round(r.height + 16); });
+    ok("the (i) is still a 44px target", hit>=44, hit);
+    await p.click("#aboutLink"); await p.waitForTimeout(700);
+    ok("(i) opens About & credits in Settings", await p.isVisible("#view-settings #about")
+      && await p.evaluate(()=>document.activeElement && document.activeElement.id==="about"));
+    const txt = await p.textContent("#about");
+    ok("the credits are all there", /ExRx\.net Exercise Directory/.test(txt) && /StrengthLog/.test(txt) && /not affiliated/.test(txt));
+    ok("it shows the version", /Version \d+/.test(await p.textContent("#aboutVer")));
+    await ctx.close();
+  }
+
   ok("no console or page errors", errors.length===0, [...new Set(errors)].slice(0,4));
   console.log(`${pass} passed, ${fail} failed`);
   await browser.close();

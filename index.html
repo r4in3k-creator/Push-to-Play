@@ -19,7 +19,7 @@
 <!-- Shown in Settings so you can tell at a glance which build you are on, and
      what a device that is behaving oddly is actually running. Keep it in step
      with VERSION in sw.js. -->
-<meta name="ptp-version" content="ptp-v21">
+<meta name="ptp-version" content="ptp-v22">
 <meta name="description" content="Push / Pull / Legs / Abs workout tracker — split templates, set-by-set logging, training calendar and personal records.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -1241,14 +1241,28 @@
   .import-day button{ flex:none; border:1px solid var(--border); background: var(--surface-2); color: var(--text-dim); border-radius:6px; padding:6px 11px; font-size:11.5px; cursor:pointer; }
   .import-day button:hover{ color: var(--text); border-color: var(--text-faint); }
 
-  footer{ max-width:1180px; margin:0 auto; padding:10px 28px 40px; color: var(--text-faint); font-size:12px; display:flex; gap:6px; flex-wrap:wrap; }
+  footer{ max-width:1180px; margin:0 auto; padding:4px 28px 28px; display:flex; justify-content:center; }
+  /* Small to look at, 44px to hit. */
+  .about-i{ position:relative; width:28px; height:28px; border-radius:50%; border:none; background:none; padding:0;
+    color: var(--text-faint); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .about-i::after{ content:""; position:absolute; inset:-8px; }
+  .about-i:hover{ color: var(--text-dim); }
+  .about-card{ scroll-margin-top: 140px; }
+  .about-card .lede{ font-size:13.5px; color: var(--text-dim); margin:6px 0 0; line-height:1.5; }
+  .about-card{ margin-top:14px; }
+  .about-card:focus{ outline:none; }
+  .about-card.flash{ animation: aboutFlash 1.4s var(--ease); }
+  @keyframes aboutFlash{ 0%,40%{ border-color: var(--text-faint); } }
+  .about-list{ margin:12px 0 0; padding-left:18px; display:flex; flex-direction:column; gap:8px;
+    font-size:13px; color: var(--text-dim); line-height:1.5; }
+  .about-list a{ color: var(--text); text-decoration: underline; text-underline-offset:2px; }
+  .about-ver{ margin:14px 0 0; font-size:12px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
   /* The footer sits outside <main>, so it carries the clearance for the fixed
      bottom tab bar. Declared after the base rule above — an earlier media query
      would lose the cascade to it at equal specificity. */
   @media (max-width: 920px){
-    footer{ padding: 10px max(16px, var(--sa-r)) calc(88px + var(--sa-b)) max(16px, var(--sa-l)); }
+    footer{ padding: 4px max(16px, var(--sa-r)) calc(84px + var(--sa-b)) max(16px, var(--sa-l)); }
   }
-  footer a{ color: var(--text-dim); text-decoration: underline; text-underline-offset:2px; }
 
   .banner{
     background: var(--surface-2); border:1px solid var(--border);
@@ -2355,6 +2369,22 @@
           </div>
           <div id="importResult"></div>
         </div>
+
+        <!-- ---- About & credits ---- -->
+        <div class="panel about-card" id="about" tabindex="-1">
+          <h3>About &amp; credits</h3>
+          <p class="lede">Push to Play keeps everything on this device. Nothing you log is sent anywhere.</p>
+          <ul class="about-list">
+            <li>Exercise names and muscle groups come from the
+              <a href="https://exrx.net/Lists/Directory" target="_blank" rel="noopener">ExRx.net Exercise Directory</a> and the
+              <a href="https://www.strengthlog.com/exercise-directory/" target="_blank" rel="noopener">StrengthLog Exercise Directory</a>.</li>
+            <li>The split structure follows the ExRx.net
+              <a href="https://exrx.net/Workouts/Workout3PPL" target="_blank" rel="noopener">3-Day Push/Pull/Legs template</a>.</li>
+            <li>Push to Play is not affiliated with ExRx.net or StrengthLog.</li>
+            <li>This app is a training log, not medical or coaching advice.</li>
+          </ul>
+          <p class="about-ver" id="aboutVer"></p>
+        </div>
       </section>
     </div>
 
@@ -2408,14 +2438,11 @@
   <div class="focus-foot"><div class="focus-foot-in" id="focusFoot"></div></div>
 </section>
 
+<!-- The credits used to fill the foot of every screen. They now live in
+     Settings → About & credits; this is just the way there. -->
 <footer>
-  <span>Exercise names and muscle groups from the</span>
-  <a href="https://exrx.net/Lists/Directory" target="_blank" rel="noopener">ExRx.net Exercise Directory</a>
-  <span>and the</span>
-  <a href="https://www.strengthlog.com/exercise-directory/" target="_blank" rel="noopener">StrengthLog Exercise Directory</a>.
-  <span>Split structure follows the ExRx.net</span>
-  <a href="https://exrx.net/Workouts/Workout3PPL" target="_blank" rel="noopener">3-Day Push/Pull/Legs template</a>.
-  <span>Not affiliated with either.</span>
+  <button type="button" class="about-i" id="aboutLink" title="About &amp; credits"
+          aria-label="About and credits"><span data-ico="info-circle" data-ico-size="18"></span></button>
 </footer>
 
 <div class="fab-stack">
@@ -3229,6 +3256,7 @@
     "chevron-up": "<path d=\"M6 15l6 -6l6 6\" />",
     "dots": "<path d=\"M4 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M18 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" />",
     "copy": "<path d=\"M7 9.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z\" /> <path d=\"M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1\" />",
+    "info-circle": "<path d=\"M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0\" /> <path d=\"M12 9h.01\" /> <path d=\"M11 12h1v4h1\" />",
     "dots-vertical": "<path d=\"M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M11 19a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" /> <path d=\"M11 5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0\" />",
     "download": "<path d=\"M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2\" /> <path d=\"M7 11l5 5l5 -5\" /> <path d=\"M12 4l0 12\" />",
     "jump-rope": "<path d=\"M6 14v-6a3 3 0 1 1 6 0v8a3 3 0 0 0 6 0v-6\" /> <path d=\"M16 5a2 2 0 0 1 2 -2a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2a2 2 0 0 1 -2 -2l0 -3\" /> <path d=\"M4 16a2 2 0 0 1 2 -2a2 2 0 0 1 2 2v3a2 2 0 0 1 -2 2a2 2 0 0 1 -2 -2l0 -3\" />",
@@ -4824,6 +4852,19 @@
     if(openMenuFor === null) return;
     if(e.target.closest(".menu-popover") || e.target.closest(".ellipsis")) return;
     openMenuFor = null; renderTray();
+  });
+
+  /* ---- About & credits: the footer (i) opens it in Settings ---- */
+  document.getElementById("aboutLink").addEventListener("click", ()=>{
+    setView("settings");
+    const card = document.getElementById("about");
+    const v = document.querySelector('meta[name="ptp-version"]');
+    document.getElementById("aboutVer").textContent = v ? "Version " + v.content.replace(/^ptp-v/, "") : "";
+    requestAnimationFrame(()=>{
+      card.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"start" });
+      card.focus({ preventScroll:true });
+      card.classList.remove("flash"); void card.offsetWidth; card.classList.add("flash");
+    });
   });
 
   /* ---- the workout's ⋯ menu ---- */

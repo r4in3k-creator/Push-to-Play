@@ -513,6 +513,11 @@ Things that look like details and are not:
     Log as the only control at the bottom. Clearing shows an Undo toast for
     seven seconds; it only asks first when ticked sets haven't been logged.
 
+54. **Credits live in Settings, not on every screen.** The ExRx / StrengthLog
+    attribution and the "not affiliated" line are in Settings → About & credits.
+    The only trace at the foot of each page is a small (i) that opens it — keep
+    the attribution itself; the sources ask for it.
+
 ### Tests
 
 They live in `tests/` because the earlier suites lived only in a scratch
