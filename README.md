@@ -518,6 +518,52 @@ Things that look like details and are not:
     The only trace at the foot of each page is a small (i) that opens it — keep
     the attribution itself; the sources ask for it.
 
+55. **openGym is a source of ideas, never of code.** It is AGPL-3.0 and its
+    exercise media is licensed to openGym alone. Set types, the effort column,
+    swipe gestures, the rest flash, screen-awake and the progress charts were
+    written here from its feature descriptions. The one third-party asset is
+    the body outline in the muscle map: MuscleMap by Melih Colpan, MIT,
+    credited in Settings → About & credits. Keep that credit if you keep the map.
+56. **A set may carry `k` and `e`, and is otherwise exactly as before.** `k:"w"`
+    is a warm-up, `k:"d"` a drop set; `e` is effort (RIR or RPE, per the
+    setting). Both are omitted when unused, so old history and share codes read
+    unchanged. Warm-ups and drop sets never feed records, the 1RM chart, the
+    muscle map or progression rules — `workSets()` is the one filter.
+57. **Timed and per-side belong to the exercise.** Name rules (`timedByName`,
+    `SIDE_RX`) set the default; the exercise editor overrides with
+    `measure: reps|time` and `side: yes|no` (strings, because `setPref` drops
+    `false`). A logged item records `timed`/`side` so history keeps its meaning
+    if the rule changes later.
+58. **The set number is the set's menu; swipe is a shortcut to it.** Swipe right
+    copies a set, left deletes it with Undo. Every swipe action is also in the
+    menu, for keyboards and anyone who doesn't swipe. The row only takes over a
+    drag once it is clearly sideways, so scrolling never deletes anything.
+59. **Charts use one ink ramp.** Magnitude in the heatmap and muscle map is the
+    app's text colour mixed into the surface in four steps — monotonic in both
+    themes (tested), colour-vision safe, and never mistaken for the push / pull
+    / legs colours. Every chart has a hover/tap readout and a table view.
+60. **The screen flash is opt-in and slow.** Three pulses at under three a
+    second, drawn with Web Animations so the global reduced-motion rule can't
+    flatten it; reduced motion gets one slow pulse instead.
+
+61. **Favorites is the directory, filtered — not a second list.** A star sets
+    `fav:"1"` in that exercise's prefs (`ptp-ex-prefs`), so it travels with
+    export and survives renames. The Favorites tab reuses the same tiles,
+    muscle-group chips, search and cards through `libPool()`; only the split
+    loader and "+ New exercise" are hidden there. Phones get it as the third
+    Train tab; desktops, which show the library permanently, get an All /
+    Favorites switch. "+ Add" and "Browse exercises" return to whichever of the
+    two you used last (`ptp-lib`).
+
+62. **The Train tabs move like one control.** A pill (`.ms-thumb`) slides under
+    the selected tab with a slight overshoot; the pane you switch to slides in
+    from that tab's side; the first eight cards follow one after another; the
+    tab icon pops (the Favorites star twirls) and a count badge bumps when its
+    number changes. The smaller switches (`.seg.has-thumb`) get the same pill,
+    moved by a MutationObserver on `aria-checked`, so no caller has to know.
+    None of it plays on first paint (`booted`) or with reduced motion, and every
+    class is one-shot — the `animationend` cleaner removes it.
+
 ### Tests
 
 They live in `tests/` because the earlier suites lived only in a scratch
@@ -526,7 +572,7 @@ directory and were lost, twice, when that machine was recycled.
 ```
 node tests/progression.test.js        # the progression maths, no browser
 python3 -m http.server 8099           # then, in another terminal:
-node tests/app.test.js                # needs `npm i playwright`
+node tests/app.test.js                # needs `npm i playwright`; seeds from tests/seed-history.js
 ```
 
 ### The share format

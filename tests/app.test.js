@@ -430,6 +430,241 @@ function contrast(a, b){
     await ctx.close();
   }
 
+  /* ---------- 10. logging depth: set kinds, effort, timed, per side ---------- */
+  const SEED = require("./seed-history.js");
+  {
+    const { ctx, p } = await open(PHONE, "light", { "ptp-settings":JSON.stringify({ effort:"rir" }) });
+    await add(p, "Barbell Bench Press"); await workout(p); await focus(p);
+    ok("effort column appears when switched on", (await p.$$(F+".effort-input")).length===3);
+    await p.fill(F+".effort-input", "2"); await p.waitForTimeout(100);
+    ok("effort is explained in plain words", /Two more reps in the tank/.test(await p.textContent("#effortHint")));
+    await p.fill(F+".effort-input", "7.6"); await p.keyboard.press("Tab"); await p.waitForTimeout(150);
+    ok("RIR is kept to a whole number", (await tray(p))[0].setLog[0].e==="8", (await tray(p))[0].setLog[0]);
+    await p.click(F+'[data-setmenu="0"]'); await p.waitForTimeout(200);
+    ok("the set number opens that set's options", await p.isVisible(F+".set-sheet"));
+    await p.click(F+'[data-setkind="w"]'); await p.waitForTimeout(200);
+    ok("a set can be marked warm-up", (await tray(p))[0].setLog[0].k==="w");
+    ok("...and says so on the row", /warm-up/i.test(await p.textContent(F+'[data-setmenu="0"]')));
+    await p.click(F+"[data-setcopy]"); await p.waitForTimeout(250);
+    const t1 = await tray(p);
+    ok("Copy set inserts a copy after it, not ticked", t1[0].setLog.length===4 && t1[0].setLog[1].k==="w" && !t1[0].setLog[1].done, t1[0].setLog);
+    await p.click(F+'[data-setmenu="1"]'); await p.waitForTimeout(200);
+    await p.click(F+"[data-setdel]"); await p.waitForTimeout(250);
+    ok("Delete set removes it", (await tray(p))[0].setLog.length===3);
+    await p.click("#toast .toast-act"); await p.waitForTimeout(250);
+    ok("...and Undo puts it back", (await tray(p))[0].setLog.length===4);
+    // log it: the details travel into history, and warm-ups stay out of the target
+    await p.fill(F+'.weight-input >> nth=0', "40"); await p.fill(F+'.reps-input >> nth=0', "10");
+    await p.click("#focusBack"); await p.waitForTimeout(300);
+    await p.click("#logBtn"); await p.waitForTimeout(400);
+    const h = await p.evaluate(()=>JSON.parse(localStorage.getItem("ptp-history")));
+    ok("set kind and effort are saved with the session", h[0].items[0].setLog[0].k==="w" && h[0].items[0].setLog[0].e==="8", h[0].items[0].setLog[0]);
+    await ctx.close();
+  }
+  {
+    const { ctx, p } = await open(PHONE);
+    await add(p, "Weighted Plank"); await add(p, "Plank to Push-Up"); await add(p, "Walking Lunge"); await workout(p);
+    await focus(p, 0);
+    ok("a plank is logged in seconds", /Seconds/.test(await p.textContent(F+".set-head")));
+    await p.click(F+"[data-fnextex]"); await p.waitForTimeout(300);
+    ok("a plank to push-up is still reps", /^\s*Reps\s*$/.test(await p.locator(F+".set-head .col-lbl").nth(1).textContent()));
+    await p.click(F+"[data-fnextex]"); await p.waitForTimeout(300);
+    ok("lunges count reps per side", /Reps \/ side/.test(await p.textContent(F+".set-head")));
+    await ctx.close();
+  }
+  {
+    // warm-ups do not move the progression target
+    const hist = JSON.stringify([{ date:day(-3), loggedAt:new Date().toISOString(), items:[
+      { id:"push-0", n:"Barbell Bench Press", cat:"push", eq:"Barbell", sets:4, setLog:[
+        { weight:"140", reps:"1", done:true, k:"w" }, { weight:"100", reps:"5", done:true },
+        { weight:"100", reps:"5", done:true }, { weight:"100", reps:"5", done:true }] }]}]);
+    const { ctx, p } = await open(PHONE, "light", { "ptp-history":hist, "ptp-ex-prefs":JSON.stringify({ "push-0":{ prog:"linear" } }) });
+    await add(p, "Barbell Bench Press"); await workout(p);
+    ok("a heavy warm-up single is ignored by the target", (await p.$eval(".next-pill", e=>e.textContent.trim()))==="102.5 × 5");
+    await ctx.close();
+  }
+
+  /* ---------- 11. gym floor: swipe, flash, screen awake ---------- */
+  {
+    const { ctx, p } = await open(PHONE, "light", { "ptp-settings":JSON.stringify({ restFlash:true }) });
+    await add(p, "Barbell Bench Press"); await workout(p); await focus(p);
+    const cdp = await ctx.newCDPSession(p);
+    const swipe = async (idx, dx)=>{
+      const r = await p.locator(`#focusPage .sw[data-sw="${idx}"]`).boundingBox();
+      const y = r.y + r.height/2, x0 = r.x + r.width/2;
+      await cdp.send("Input.dispatchTouchEvent", { type:"touchStart", touchPoints:[{ x:x0, y }] });
+      for(let i=1;i<=10;i++){ await cdp.send("Input.dispatchTouchEvent", { type:"touchMove", touchPoints:[{ x:x0 + dx*i/10, y }] }); }
+      await cdp.send("Input.dispatchTouchEvent", { type:"touchEnd", touchPoints:[] });
+      await p.waitForTimeout(300);
+    };
+    await p.fill(F+'.weight-input >> nth=0', "60"); await p.keyboard.press("Tab");
+    await swipe(0, 120);
+    const a = await tray(p);
+    ok("swiping a set right copies it", a[0].setLog.length===4 && a[0].setLog[1].weight==="60", a[0].setLog);
+    await swipe(1, -120);
+    ok("swiping a set left deletes it", (await tray(p))[0].setLog.length===3);
+    ok("...with an Undo", await p.isVisible("#toast .toast-act"));
+    await swipe(0, 40);
+    ok("a short swipe does nothing", (await tray(p))[0].setLog.length===3);
+    await swipe(0, -120); await swipe(0, -120); await swipe(0, -120);
+    ok("the last set cannot be swiped away", (await tray(p))[0].setLog.length===1);
+    await ctx.close();
+  }
+  {
+    const { ctx, p } = await open(PHONE, "light", { "ptp-settings":JSON.stringify({ restFlash:true }) });
+    await add(p, "Barbell Bench Press");
+    await p.evaluate(()=>{ const t=JSON.parse(localStorage.getItem("ptp-tray")); t[0].restSeconds=1; localStorage.setItem("ptp-tray", JSON.stringify(t)); });
+    await p.reload(); await p.waitForTimeout(700); await workout(p); await focus(p);
+    await p.click(F+".set-row .check-wrap"); await p.waitForTimeout(1500);
+    ok("the screen flashes when a rest ends (if switched on)", await p.evaluate(()=>!!document.getElementById("flashVeil")
+      && document.getElementById("flashVeil").getAnimations().length > 0));
+    await ctx.close();
+  }
+  {
+    const { ctx, p } = await open(PHONE);
+    await add(p, "Barbell Bench Press"); await focus(p).catch(()=>{});
+    await p.click('.viewtab[data-view="train"]').catch(()=>{});
+    await p.click("#avatarBtn"); await p.waitForTimeout(150); await p.click('#acctMenu [data-go="settings"]'); await p.waitForTimeout(300);
+    ok("settings offer flash, screen-on and effort", await p.isVisible("#stRestFlash") && await p.isVisible("#stKeepAwake") && await p.isVisible("#stEffort"));
+    ok("screen-on is on by default", (await p.inputValue("#stKeepAwake"))==="on");
+    await p.selectOption("#stEffort", "rpe"); await p.click("#stSave"); await p.waitForTimeout(250);
+    ok("effort mode saves", (await p.evaluate(()=>JSON.parse(localStorage.getItem("ptp-settings")).effort))==="rpe");
+    await ctx.close();
+  }
+
+  /* ---------- 12. progress charts ---------- */
+  for(const scheme of ["light","dark"]){
+    const { ctx, p } = await open(PHONE, scheme, { "ptp-history":SEED() });
+    await p.click('.viewtab[data-view="records"]'); await p.waitForTimeout(600);
+    const ov = await p.evaluate(()=>document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    ok(`records with charts fits the phone (${scheme})`, ov===0, ov);
+    ok(`1RM chart draws a line (${scheme})`, (await p.$$("#e1rmBody .e-line")).length===1);
+    const opts = await p.$$eval("#e1rmPick option", o=>o.map(x=>x.textContent));
+    ok("lifts are offered most-logged first", /Barbell Bench Press|Barbell Back Squat/.test(opts[0]) && opts.length===4, opts);
+    const big = await p.textContent("#e1rmBody .big");
+    ok("the hero is the latest estimate", parseFloat(big) > 0, big);
+    await p.click('#e1rmRange [data-range="0"]'); await p.waitForTimeout(200);
+    const rows = await p.$$eval("#e1rmBody tbody tr", r=>r.length);
+    ok("All shows every session in the table", rows===12, rows);
+    // muscle map: squat 3 days ago → quads lit; nothing for calves
+    const fills = await p.evaluate(()=>{ const g=k=>{ const e=document.querySelector(`#muscleBody .bm-m[data-m="${k}"]`); return e && getComputedStyle(e).fill; };
+      return { quads:g("quadriceps"), calves:g("calves"), chest:g("chest") }; });
+    ok(`muscle map shades trained muscles and not the rest (${scheme})`, fills.quads && fills.quads!==fills.calves, fills);
+    await p.locator('#muscleBody .bm-m[data-m="quadriceps"]').first().dispatchEvent("click"); await p.waitForTimeout(150);
+    ok("tapping a muscle says its sets", /Quads: \d/.test(await p.textContent("#bmCaption")));
+    // ramp: steps get steadily further from the surface
+    const ramp = await p.$$eval("#heatBody .ink-legend i", els=>els.map(e=>getComputedStyle(e).backgroundColor));
+    /* OKLab lightness, whichever form the browser reports the colour in */
+    const lum = c=>{ const m=c.match(/[\d.]+/g).map(Number); if(/^oklab/.test(c)) return m[0];
+      const f=v=>{ v/=255; return v<=0.04045? v/12.92 : Math.pow((v+0.055)/1.055,2.4); };
+      const [r,g,b]=m.slice(0,3).map(f);
+      const l=Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b), mm=Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b), sx=Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+      return 0.2104542553*l+0.7936177850*mm-0.0040720468*sx; };
+    const L = ramp.map(lum).filter(v=>v!==null);
+    /* each step at least 0.1 L from the last, so neighbours are told apart */
+    const mono = L.length===5 && L.slice(1).every((v,i)=> scheme==="light" ? L[i] - v >= 0.1 : v - L[i] >= 0.1);
+    ok(`the ink ramp is monotonic (${scheme})`, mono, ramp);
+    const cells = await p.$$eval("#heatBody rect", r=>r.length);
+    ok("heatmap fills the width it has", cells >= 7*18, cells);
+    await ctx.close();
+  }
+  {
+    const { ctx, p } = await open(PHONE);
+    await p.click('.viewtab[data-view="records"]'); await p.waitForTimeout(400);
+    ok("no history: the charts explain themselves instead of drawing nothing",
+      (await p.$$("#progressGrid .prog-empty")).length===2);
+    await ctx.close();
+  }
+
+  /* ---------- 13. favorites ---------- */
+  {
+    const { ctx, p } = await open(PHONE);
+    ok("there is a Favorites tab beside Workout and Browse", (await p.$$('#modeSwitch [data-mode="favorites"]')).length===1);
+    ok("the desktop switch stays out of the phone's way", !(await p.isVisible("#libSwitch")));
+    await p.click('#modeSwitch [data-mode="favorites"]'); await p.waitForTimeout(300);
+    ok("no favorites yet: it says how to get some", await p.isVisible(".fav-empty"));
+    await p.click("[data-gobrowse]"); await p.waitForTimeout(300);
+    ok("...and Go to Browse goes there", (await p.getAttribute('#modeSwitch [data-mode="browse"]', "aria-pressed"))==="true");
+    for(const n of ["Barbell Bench Press", "Barbell Back Squat", "Lat Pulldown"]){
+      await p.fill("#search", n); await p.waitForTimeout(350);
+      await p.click("#groups .card .fav-btn"); await p.waitForTimeout(150);
+    }
+    await p.fill("#search", ""); await p.waitForTimeout(250);
+    const small = await p.$$eval("#groups .fav-btn", els=>els.slice(0,5).map(e=>Math.round(e.getBoundingClientRect().height)).filter(h=>h<40));
+    ok("stars are 40px targets", small.length===0, small);
+    ok("the tab counts them", (await p.textContent("#msFav")).trim()==="3");
+    await p.click('#modeSwitch [data-mode="favorites"]'); await p.waitForTimeout(300);
+    ok("Favorites lists only starred exercises", (await p.$$("#groups .card")).length===3);
+    const counts = await p.$$eval("#tiles .tile .sub", els=>els.map(e=>e.textContent.trim()));
+    ok("the same Push / Pull / Legs / Abs tiles, counting favorites", counts.length===4 && /1$/.test(counts[0]) && /0$/.test(counts[3]), counts);
+    await p.click('#tiles .tile[data-cat="legs"]'); await p.waitForTimeout(250);
+    ok("a category narrows the favorites", (await p.$$("#groups .card")).length===1);
+    ok("the split loader stays out of Favorites", !(await p.isVisible(".splits")));
+    await p.click("#groups .card .add-btn"); await p.waitForTimeout(300);
+    ok("adding from Favorites puts it in the workout", (await tray(p)).length===1);
+    await p.click('#tiles .tile[data-cat="legs"]'); await p.waitForTimeout(200);
+    await p.locator("#groups .card .fav-btn").first().click(); await p.waitForTimeout(250);
+    ok("unstarring in Favorites removes it, with Undo", (await p.$$("#groups .card")).length===2 && await p.isVisible("#toast .toast-act"));
+    await p.click("#toast .toast-act"); await p.waitForTimeout(250);
+    ok("...and Undo brings it back", (await p.$$("#groups .card")).length===3);
+    // + Add returns to the library you were using
+    await workout(p);
+    await p.click("#trayBack"); await p.waitForTimeout(300);
+    ok("+ Add goes back to Favorites", (await p.getAttribute('#modeSwitch [data-mode="favorites"]', "aria-pressed"))==="true");
+    // star from the exercise page too
+    await workout(p); await focus(p);
+    ok("the exercise page shows it is a favorite", (await p.getAttribute("#focusFav", "aria-pressed"))==="true");
+    await p.click("#focusFav"); await p.waitForTimeout(200);
+    ok("...and can unstar it", !(await p.evaluate(()=>JSON.parse(localStorage.getItem("ptp-ex-prefs"))["legs-51"]||{})).fav);
+    await p.click("#focusBack"); await p.waitForTimeout(200);
+    await p.reload(); await p.waitForTimeout(700);
+    ok("favorites survive a reload", (await p.textContent("#msFav")).trim()==="2");
+    await ctx.close();
+  }
+  {
+    const { ctx, p } = await open(DESK, "dark", { "ptp-ex-prefs":JSON.stringify({ "push-0":{ fav:"1" } }) });
+    ok("desktop has the All / Favorites switch", await p.isVisible("#libSwitch"));
+    await p.click('#libSwitch [data-lib="favorites"]'); await p.waitForTimeout(300);
+    ok("...and it filters", (await p.$$("#groups .card")).length===1);
+    const ov = await p.evaluate(()=>document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    ok("no sideways scroll", ov===0, ov);
+    await ctx.close();
+  }
+
+  /* ---------- 14. animated train tabs ---------- */
+  {
+    const { ctx, p } = await open(PHONE, "light", { "ptp-ex-prefs":JSON.stringify({ "push-0":{ fav:"1" } }) });
+    const under = async ()=> p.evaluate(()=>{ const t=document.querySelector("#modeSwitch .ms-thumb").getBoundingClientRect(),
+      b=document.querySelector("#modeSwitch button.on").getBoundingClientRect(); return Math.abs(t.left-b.left) < 2 && Math.abs(t.width-b.width) < 2; });
+    ok("the tab pill starts under the open tab", await under());
+    await p.click('#modeSwitch [data-mode="favorites"]'); await p.waitForTimeout(60);
+    ok("the new pane slides in from the right", (await p.$$("#browsePane.pane-in-r")).length===1);
+    ok("the star twirls", (await p.$$('#modeSwitch [data-mode="favorites"] .ms-ico.twirl')).length===1);
+    ok("the first cards come in one after another", (await p.$$("#groups .card.card-in")).length>=1);
+    await p.waitForTimeout(600);
+    ok("...and the pill glides to Favorites", await under());
+    ok("one-shot classes are cleaned up", (await p.$$(".pane-in-r, .twirl, .card-in")).length===0);
+    await p.click('#modeSwitch [data-mode="workout"]'); await p.waitForTimeout(60);
+    ok("going left slides in from the left", (await p.$$("#trayPanel.pane-in-l")).length===1);
+    await p.waitForTimeout(500);
+    ok("pill under Workout", await under());
+    await ctx.close();
+  }
+  {
+    const { ctx, p } = await open(PHONE, "light", null, { reducedMotion:"reduce" });
+    await p.click('#modeSwitch [data-mode="favorites"]'); await p.waitForTimeout(60);
+    ok("reduced motion: panes just appear", (await p.$$(".pane-in-r, .pane-in-l, .twirl, .card-in")).length===0);
+    await ctx.close();
+  }
+  {
+    const { ctx, p } = await open(DESK, "dark", { "ptp-ex-prefs":JSON.stringify({ "push-0":{ fav:"1" } }) });
+    await p.click('#libSwitch [data-lib="favorites"]'); await p.waitForTimeout(500);
+    const g = await p.evaluate(()=>{ const t=document.querySelector("#libSwitch .seg-thumb").getBoundingClientRect(),
+      b=document.querySelector('#libSwitch [aria-checked="true"]').getBoundingClientRect(); return Math.abs(t.left-b.left) < 2; });
+    ok("desktop switch pill follows too", g);
+    await ctx.close();
+  }
+
   ok("no console or page errors", errors.length===0, [...new Set(errors)].slice(0,4));
   console.log(`${pass} passed, ${fail} failed`);
   await browser.close();
